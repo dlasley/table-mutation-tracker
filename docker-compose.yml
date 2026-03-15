@@ -1,0 +1,31 @@
+services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+  n8n:
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD:?Set N8N_PASSWORD in .env}
+      - GENERIC_TIMEZONE=${TIMEZONE:-America/Los_Angeles}
+      - N8N_HOST=n8n.davebrot.com
+      - N8N_PROTOCOL=https
+      - WEBHOOK_URL=https://n8n.davebrot.com/
+      - N8N_SECURE_COOKIE=true
+    volumes:
+      - /home/n8n-data:/home/node/.n8n
+    user: "1000:1000"
+
+volumes:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,13 @@
+.venv/
+.env
+.git/
+.DS_Store
+snapshots/
+index/
+frontend/
+node_modules/
+__pycache__/
+*.pyc
+scripts/
+PROGRESS.md
+CLAUDE.md

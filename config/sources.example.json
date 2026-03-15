@@ -1,16 +1,19 @@
-// This file is an example of the sources configuration file. It should be copied to config/sources.json and edited with the correct values, including all classes.
 {
   "sis": {
-    "base_url": "https://sis_url",
-    "login_path": "/login_url",
+    "base_url": "https://<sis_url>",
+    "login_path": "<login_path>",
     "classes": [
       {
-        "slug": "class 1",
-        "url": "class_url"
+        "slug": "Class 1",
+        "url": "<class_1_url>"
       },
       {
-        "slug": "class 2",
-        "url": "class_url"
+        "slug": "Class 2",
+        "url": "<class_2_url>"
+      },
+      {
+        "slug": "Class 3",
+        "url": "<class_3_url>"
       }
     ]
   }

@@ -1,0 +1,28 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment / secrets
+.env
+.env.local
+*.env.local
+private/
+config/sources.json
+
+# Node / Next.js
+frontend/node_modules/
+frontend/.next/
+.vercel
+
+# n8n
+n8n/table-mutation-data-orchestrator.json  
+
+# OS
+.DS_Store
+
+# Claude
+.claude/
+CLAUDE.md
+PROGRESS.md

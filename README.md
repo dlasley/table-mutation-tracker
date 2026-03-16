@@ -52,7 +52,7 @@ The system is decomposed into four isolated runtime boundaries deployed across n
 
 ### n8n as the Control Plane
 
-n8n owns the entire data flow. The scraper is a stateless worker that returns JSON -- it knows nothing about where data goes or who gets notified. n8n decides what happens with the results: commit to GitHub, notify on changes, retry on failure, route alerts and status notifications via email, with additional messaging channels available as workflow branches.
+n8n owns the data flow. The scraper is a stateless worker that returns JSON -- it knows nothing about where data goes or who gets notified. n8n decides what happens with the results: commit to GitHub, notify on changes, retry on failure, route alerts and status notifications via email, with additional messaging channels available as workflow branches.
 
 This is a deliberate separation. The scraper's job is to collect. n8n's job is to orchestrate. Neither holds responsibility for the other's concerns.
 

@@ -5,6 +5,7 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import ClassTabs from "@/components/ClassTabs";
 import DiffTable from "@/components/DiffTable";
+import ChangeLegend from "@/components/ChangeLegend";
 import GradeBanner from "@/components/GradeBanner";
 import SnapshotCalendarPicker from "@/components/SnapshotCalendarPicker";
 import type {
@@ -167,6 +168,8 @@ export default function DayDetail({
           No comparison selected.
         </div>
       )}
+
+      <ChangeLegend />
 
       <ClassTabs
         classes={snapshot.classes}

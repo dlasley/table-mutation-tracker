@@ -133,7 +133,7 @@ function DayCell({
 
   return (
     <Link href={`/day/${snapshot.date}/${formatTime(snapshot.time)}`}>
-      <div className={`h-24 rounded border ${bgColor} p-1 hover:ring-2 hover:ring-blue-400 cursor-pointer transition-all`}>
+      <div className={`h-24 rounded border ${bgColor} p-1 hover:ring-2 hover:ring-blue-400 cursor-pointer transition-all`} title={changes.total > 0 ? `${changes.total} change${changes.total !== 1 ? "s" : ""} detected` : "No changes from previous snapshot"}>
         <span className="text-xs font-medium">{day}</span>
         {changes.total > 0 && (
           <div className="mt-1 text-xs space-y-0.5">

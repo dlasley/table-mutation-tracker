@@ -5,6 +5,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime
 
 from playwright.async_api import async_playwright
+from playwright_stealth import Stealth
 
 from src.config import load_config
 from src.scraper.base import ClassSnapshot
@@ -75,6 +76,7 @@ async def run_scrape() -> ScrapeResult:
             ),
         )
         page = await context.new_page()
+        await Stealth().apply_stealth_async(page)
 
         # Login
         print("Logging in...")
@@ -95,8 +97,7 @@ async def run_scrape() -> ScrapeResult:
         snapshots = []
 
         for i, cls in enumerate(source_config.classes):
-            if i > 0:
-                await scraper.throttle()
+            await scraper.throttle()
 
             print(f"\nScraping class {i+1}/{len(source_config.classes)}...")
             snapshot = await scraper.scrape_class(page, source_config, cls)

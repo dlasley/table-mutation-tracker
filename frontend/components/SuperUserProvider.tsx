@@ -22,8 +22,21 @@ export default function SuperUserProvider({
         setSuperUser((v) => !v);
       }
     }
+    function handleClick(e: MouseEvent) {
+      if (e.detail === 3) {
+        const target = e.target as HTMLElement;
+        if (target.closest("[data-superuser-toggle]")) {
+          e.preventDefault();
+          setSuperUser((v) => !v);
+        }
+      }
+    }
     window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
+    window.addEventListener("click", handleClick);
+    return () => {
+      window.removeEventListener("keydown", handleKey);
+      window.removeEventListener("click", handleClick);
+    };
   }, []);
 
   return (

@@ -28,13 +28,17 @@ class SISSource(TableSource):
             content = (await page.content())[:1500]
             print(f"  LOGIN FORM NOT FOUND. Page content: {content}")
             raise
+        # Human-like delays between form interactions
+        await asyncio.sleep(random.uniform(0.5, 1.5))
         await page.locator("#fieldAccount").click()
-        await page.locator("#fieldAccount").fill(username)
+        await page.locator("#fieldAccount").type(username, delay=random.uniform(40, 120))
+        await asyncio.sleep(random.uniform(0.3, 0.8))
         await page.locator("#fieldPassword").click()
-        await page.locator("#fieldPassword").fill(password)
+        await page.locator("#fieldPassword").type(password, delay=random.uniform(40, 120))
+        await asyncio.sleep(random.uniform(0.5, 1.5))
         await page.click("#btn-enter-sign-in")
         await page.wait_for_load_state("networkidle")
-        await asyncio.sleep(2)
+        await asyncio.sleep(random.uniform(3, 6))
 
     async def scrape_class(
         self, page: Page, source_config: SourceConfig, class_config: ClassConfig
@@ -74,7 +78,7 @@ class SISSource(TableSource):
 
     @staticmethod
     async def throttle() -> None:
-        delay = random.uniform(2, 5)
+        delay = random.uniform(4, 10)
         await asyncio.sleep(delay)
 
     def _extract_metadata(self, soup: BeautifulSoup) -> ClassMetadata:

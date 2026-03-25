@@ -6,8 +6,8 @@ export default function HeaderTitle() {
   const toggleRef = useSuperUserToggleRef();
 
   return (
-    <a href="/" ref={toggleRef} className="text-lg font-semibold select-none">
+    <span ref={toggleRef} className="text-lg font-semibold select-none cursor-default">
       Grades
-    </a>
+    </span>
   );
 }

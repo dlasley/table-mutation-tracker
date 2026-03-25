@@ -48,17 +48,17 @@ export default function ClassTabs({ classes, activeSlug, onSelect, changes = [] 
             {counts && (
               <span className="ml-1.5 text-xs font-mono">
                 {counts.added > 0 && (
-                  <span className="text-green-600 dark:text-green-400">
+                  <span className="text-green-600 dark:text-green-400" title={`${counts.added} assignment${counts.added !== 1 ? "s" : ""} added`}>
                     +{counts.added}
                   </span>
                 )}
                 {counts.modified > 0 && (
-                  <span className={counts.added > 0 ? "ml-1 text-orange-500" : "text-orange-500"}>
+                  <span className={counts.added > 0 ? "ml-1 text-orange-500" : "text-orange-500"} title={`${counts.modified} assignment${counts.modified !== 1 ? "s" : ""} changed`}>
                     ~{counts.modified}
                   </span>
                 )}
                 {counts.deleted > 0 && (
-                  <span className={counts.added + counts.modified > 0 ? "ml-1 text-red-500" : "text-red-500"}>
+                  <span className={counts.added + counts.modified > 0 ? "ml-1 text-red-500" : "text-red-500"} title={`${counts.deleted} assignment${counts.deleted !== 1 ? "s" : ""} deleted`}>
                     -{counts.deleted}
                   </span>
                 )}

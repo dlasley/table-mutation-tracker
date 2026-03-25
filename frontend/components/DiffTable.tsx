@@ -118,7 +118,7 @@ export default function DiffTable({ assignments, changes, slug }: DiffTableProps
           {changes
             .filter((c) => c.class === slug && c.type === "deleted")
             .map((c) => (
-              <tr key={`del-${c.assignment}|${c.due_date}`} className="bg-red-50 dark:bg-red-950/30 border-b border-gray-100 dark:border-gray-800">
+              <tr key={`del-${c.assignment}|${c.due_date}`} className="bg-red-50 dark:bg-red-950/30 border-b border-gray-100 dark:border-gray-800" title="Assignment was present in previous snapshot but is now gone">
                 <td className="py-2 px-2 text-red-500 text-center">-</td>
                 <td className="py-2 px-2 line-through text-gray-400">{formatDate(c.due_date)}</td>
                 <td className="py-2 px-2 text-gray-400">--</td>
@@ -162,6 +162,7 @@ function AssignmentRow({
       <tr
         className={`border-b border-gray-100 dark:border-gray-800 ${rowBg} ${hasChange ? "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800" : ""}`}
         onClick={hasChange ? onToggle : undefined}
+        title={change?.type === "added" ? "New assignment (click to expand)" : change?.type === "modified" ? "Changed since last snapshot (click to expand)" : undefined}
       >
         <td className={`py-2 px-2 text-center ${change?.type === "added" ? "text-green-500" : change?.type === "modified" ? "text-orange-500" : "text-gray-300"}`}>
           {indicator}

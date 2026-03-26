@@ -52,3 +52,15 @@ export interface Assignment {
   has_comments: boolean;
   flags: Record<string, boolean>;
 }
+
+export interface DeletedAssignment {
+  className: string;
+  classSlug: string;
+  assignment: string;
+  due_date: string;
+  score_raw: string;
+  grade: string | null;
+  percent: number | null;
+  first_seen: string;
+  first_deleted: string;
+}

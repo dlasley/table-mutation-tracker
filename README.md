@@ -17,11 +17,11 @@ The system is decomposed into four isolated runtime boundaries deployed across n
                     │  Scheduling · Dispatch · Conditional logic   │
                     │  Credential management · Delivery routing    │
                     │                                              │
-                    │  (see Control Plane Workflow.jpg)            │
+                    │  (see Control Plane Workflow.png)            │
                     └──┬──────────────┬───────────────────┬────────┘
                        │              │                   │
          POST /scrape  │  GitHub API  │           Email,  │
-           IAM + HMAC  │    (commit)  │      Slack, etc.  │
+                 HMAC  │    (commit)  │      Slack, etc.  │
                        ▼              ▼                   ▼
 ┌────────────────────────┐ ┌────────────────────────┐ ┌────────────────────┐
 │   COLLECTION + INDEX   │ │     STORAGE            │ │     MESSAGING      │
@@ -56,9 +56,9 @@ n8n owns the data flow. The scraper is a stateless worker that returns JSON -- i
 
 This is a deliberate separation. The scraper's job is to collect. n8n's job is to orchestrate. Neither holds responsibility for the other's concerns.
 
-![n8n Daily Scrape Pipeline](n8n/Control%20Plane%20Workflow.jpg)
+![n8n Daily Scrape Pipeline](n8n/Control%20Plane%20Workflow.png)
 
-**Workflow**: Schedule Trigger &rarr; POST /scrape to scraper &rarr; success/failure branch &rarr; split class snapshots &rarr; commit each to GitHub &rarr; update snapshot metadata &rarr; diff snapshots (n8n Code nodes) &rarr; update rolling index &rarr; notify on error
+**Workflow**: Schedule Trigger &rarr; POST /scrape to scraper &rarr; success/failure branch &rarr; split class snapshots &rarr; commit each to GitHub &rarr; update snapshot metadata &rarr; POST /rebuild-index (server-side diff + index write) &rarr; notify on error (scrape failure or index rebuild failure)
 
 ### Collection + Index: Containerized Scraper
 
@@ -99,8 +99,8 @@ index/
 
 A Next.js app on Vercel reads snapshots from the data repo via GitHub API. Change detection happens at two levels:
 
-- **Rolling index** (pre-computed): n8n's Code nodes diff each new snapshot against its predecessor and store change counts in the rolling index. The calendar view reads these counts to color-code days without fetching individual snapshots.
-- **Detail view** (client-side): When a user clicks a day, the frontend fetches both snapshots and diffs them field-by-field, classifying changes as added, deleted, graded, or modified.
+- **Rolling index** (pre-computed): After each scrape, n8n calls the scraper's `/rebuild-index` endpoint, which diffs all consecutive snapshot pairs and writes change counts to the rolling index. The calendar view reads these counts to color-code days without fetching individual snapshots.
+- **Detail view** (client-side): When a user clicks a day, the frontend fetches both snapshots and diffs them field-by-field, classifying changes as added, deleted, or modified.
 
 This keeps the frontend fully decoupled from both the scraper and n8n. It reads from storage and nothing else.
 
@@ -125,7 +125,7 @@ table-mutation-tracker/
 │       └── normalize.py     # Date, score, grade normalization
 ├── frontend/
 │   ├── app/                 # Next.js App Router (calendar + day views)
-│   ├── components/          # CalendarView, DiffTable, ClassTabs, GradeBanner
+│   ├── components/          # CalendarView, DiffTable, ClassTabs, ChangeLegend, etc.
 │   ├── lib/
 │   │   ├── diff.ts          # Client-side assignment diffing engine
 │   │   ├── snapshots.ts     # GitHub API data fetching

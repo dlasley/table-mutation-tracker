@@ -127,6 +127,8 @@ class SnapshotStore(ABC):
         Writes the result via write_rolling_index.
         """
         all_snapshots = await self.list_snapshots()
+        total = len(all_snapshots)
+        print(f"  Found {total} snapshots to index")
         snapshots_list = []
 
         for i, (date, time) in enumerate(all_snapshots):
@@ -142,6 +144,10 @@ class SnapshotStore(ABC):
             added = sum(1 for c in assignment_changes if c["type"] == "added")
             modified = sum(1 for c in assignment_changes if c["type"] == "modified")
             deleted = sum(1 for c in assignment_changes if c["type"] == "deleted")
+
+            change_total = len(assignment_changes)
+            change_summary = f"+{added} ~{modified} -{deleted}" if change_total > 0 else "no changes"
+            print(f"  [{i+1}/{total}] {date}/{time}  {change_summary}")
 
             classes = {}
             for slug, cls_meta in metadata.get("classes", {}).items():
@@ -162,7 +168,7 @@ class SnapshotStore(ABC):
                     "added": added,
                     "modified": modified,
                     "deleted": deleted,
-                    "total": len(assignment_changes),
+                    "total": change_total,
                 },
                 "classes": classes,
             })

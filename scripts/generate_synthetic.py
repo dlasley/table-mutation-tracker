@@ -14,16 +14,20 @@ import copy
 import json
 import random
 import sys
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
+
+
+def log(msg: str) -> None:
+    log(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts.lib.github_store import GitHubStore
+from src.lib.github_store import GitHubStore
 
 SEED = 42
-REFERENCE_DATE = date(2026, 3, 10)
+REFERENCE_DATE = date.today()
 TIMES = ["083000", "153000"]
 
 GRADE_SCALE = [
@@ -408,8 +412,8 @@ def _build_store():
     token = os.environ.get("GITHUB_TOKEN")
     repo = os.environ.get("DATA_REPO", "dlasley/table-mutation-data")
     if not token:
-        print("ERROR: GITHUB_TOKEN env var required")
-        print("  Hint: GITHUB_TOKEN=$(gh auth token) python scripts/generate_synthetic.py --days 7")
+        log("ERROR: GITHUB_TOKEN env var required")
+        log("  Hint: GITHUB_TOKEN=$(gh auth token) python scripts/generate_synthetic.py --days 7")
         sys.exit(1)
 
     return GitHubStore(
@@ -420,18 +424,79 @@ def _build_store():
     )
 
 
+async def clean_synthetic(store: GitHubStore) -> None:
+    """Delete all existing synthetic snapshot and index data."""
+    log("Cleaning existing synthetic data...")
+
+    # Delete all snapshot files
+    date_dirs = await store._list_dir(store.snapshot_prefix)
+    for date_name in date_dirs:
+        time_dirs = await store._list_dir(f"{store.snapshot_prefix}/{date_name}")
+        for time_name in time_dirs:
+            # List class dirs and metadata
+            path = f"{store.snapshot_prefix}/{date_name}/{time_name}"
+            entries = await store._list_dir(path)
+            for entry in entries:
+                # Delete assignments.json in each class dir
+                file_path = f"{path}/{entry}/assignments.json"
+                sha = await store._get_file_sha(file_path)
+                if sha:
+                    await _delete_file(store, file_path, sha)
+                    log(f"  deleted {file_path}")
+            # Delete metadata.json
+            meta_path = f"{path}/metadata.json"
+            sha = await store._get_file_sha(meta_path)
+            if sha:
+                await _delete_file(store, meta_path, sha)
+                log(f"  deleted {meta_path}")
+
+    # Delete rolling index
+    index_path = f"{store.index_prefix}/rolling_index.json"
+    sha = await store._get_file_sha(index_path)
+    if sha:
+        await _delete_file(store, index_path, sha)
+        log(f"  deleted {index_path}")
+
+    log("Clean complete.")
+
+
+async def _delete_file(store: GitHubStore, path: str, sha: str) -> None:
+    """Delete a file from the repo via GitHub Contents API."""
+    import time as _time
+    from urllib.request import Request, urlopen
+    payload = json.dumps({
+        "message": f"cleanup: remove synthetic {path}",
+        "sha": sha,
+        "branch": store.branch,
+    }).encode("utf-8")
+    req = Request(
+        store._contents_url(path),
+        data=payload,
+        headers={**store._headers(), "Content-Type": "application/json"},
+        method="DELETE",
+    )
+    with urlopen(req) as resp:
+        resp.read()
+    _time.sleep(0.3)  # avoid rate limits
+
+
 def main():
     parser = argparse.ArgumentParser(description="Generate synthetic snapshot data")
     parser.add_argument("--days", type=int, required=True,
                         help="Number of days to generate (1-30)")
+    parser.add_argument("--clean", action="store_true",
+                        help="Delete all existing synthetic data before generating")
     args = parser.parse_args()
 
     if not 1 <= args.days <= 30:
-        print("ERROR: --days must be between 1 and 30")
+        log("ERROR: --days must be between 1 and 30")
         sys.exit(1)
 
     rng = random.Random(SEED)
     store = _build_store()
+
+    if args.clean:
+        asyncio.run(clean_synthetic(store))
 
     # Generate dates from (days-1) ago through reference date
     dates = [
@@ -458,19 +523,19 @@ def main():
 
             metadata = build_metadata(snapshot_date, time, state, prev_snapshot)
 
-            print(f"  Writing {snapshot_date}/{time}...")
+            log(f"  Writing {snapshot_date}/{time}...")
             asyncio.run(write_snapshot(store, snapshot_date, time, metadata, state))
 
             prev_snapshot = f"{snapshot_date}/{time}"
             total_snapshots += 1
 
     # Rebuild rolling index
-    print("Rebuilding rolling index...")
+    log("Rebuilding rolling index...")
     index = asyncio.run(store.rebuild_rolling_index())
-    print(f"  Indexed {len(index['snapshots'])} snapshots")
+    log(f"  Indexed {len(index['snapshots'])} snapshots")
 
-    print(f"\nDone: {total_snapshots} snapshots across {args.days} days pushed to GitHub")
-    print("  Set DATA_PREFIX=synthetic on Vercel to use it")
+    log(f"\nDone: {total_snapshots} snapshots across {args.days} days pushed to GitHub")
+    log("  Set DATA_PREFIX=synthetic on Vercel to use it")
 
 
 if __name__ == "__main__":

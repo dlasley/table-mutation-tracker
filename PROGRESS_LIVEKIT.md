@@ -4,33 +4,41 @@
 `feature/livekit-agent-widget`
 
 ## Last Session Summary
-**Date**: 2026-03-29
+**Date**: 2026-03-30
 
 ### Completed Work
-- Installed LiveKit React SDK dependencies (`livekit-client`, `@livekit/components-react`, `@livekit/components-styles`, `livekit-server-sdk`, `@livekit/protocol`)
-- Created token API route (`frontend/app/api/livekit-token/route.ts`) — server-side JWT generation with agent dispatch
-- Created AgentWidget component (`frontend/components/AgentWidget.tsx`) — floating widget with connect/disconnect, BarVisualizer, and state display
-- Added AgentWidget to root layout (`frontend/app/layout.tsx`)
-- Created `LIVEKIT_AGENT.md` — full integration documentation
-- Updated `CLAUDE.md` with cross-reference to LiveKit work
-- Build succeeds, no new lint errors
+- LiveKit React SDK integrated (livekit-client, @livekit/components-react, livekit-server-sdk, @livekit/protocol)
+- Token API route with RoomAgentDispatch for agent dispatch
+- AgentWidget with video track rendering (Hedra avatar) and BarVisualizer fallback
+- Stable device_id via localStorage UUID for user profile tracking
+- NavigationHandler: agent can navigate the browser via LiveKit RPC
+- DayDetail reads `?class=` query param for class tab deep-linking
+- Day page redirect preserves query params through date→time redirect
+- End-to-end working: voice + avatar + tools + browser navigation
 
-## Uncommitted Changes
-- `frontend/app/api/livekit-token/route.ts` — New
-- `frontend/components/AgentWidget.tsx` — New
-- `frontend/app/layout.tsx` — Modified (AgentWidget added)
-- `frontend/package.json` — Modified (LiveKit dependencies)
-- `frontend/package-lock.json` — Modified
-- `LIVEKIT_AGENT.md` — New
-- `CLAUDE.md` — Modified (cross-reference)
-- `PROGRESS_LIVEKIT.md` — New
+### Commits on this branch
+- `30ee86d` — Initial widget (token route, AgentWidget, layout)
+- `522f84a` — Avatar video track rendering
+- `fa6a3af` — Stable device_id in token request
+- `01e3886` — Agent-driven browser navigation (RPC handler, class param, redirect fix)
 
-## Status
-- [x] Configure LiveKit Cloud credentials in `.env.local` and `frontend/.env.local`
-- [x] Deploy Sally agent from `sally-schoolwork` to LiveKit Cloud
-- [x] End-to-end test: frontend widget connects to agent via LiveKit Cloud
-- [x] Fixed token route agent dispatch (RoomAgentDispatch)
+## Files modified/added
+```
+frontend/
+  app/api/livekit-token/route.ts    — Token endpoint with agent dispatch
+  components/AgentWidget.tsx         — Widget: video/audio, connect/disconnect, RPC navigation
+  app/layout.tsx                     — AgentWidget added to root layout
+  app/day/[date]/page.tsx            — Redirect preserves query params
+  app/day/[date]/DayDetail.tsx       — Reads ?class= param for tab selection
+  package.json                       — LiveKit SDK dependencies
+LIVEKIT_AGENT.md                     — Integration documentation
+PROGRESS_LIVEKIT.md                  — This file
+```
+
+## Known Issues
+- Navigation mismatch: agent narrates aggregate data but browser shows single snapshot diff
+- Needs code review to align tool output with what the frontend renders at each route
 
 ## Next Steps
-- Phase 6: Voice/persona tuning, avatar, visualizer
-- Merge `feature/livekit-agent-widget` into main when ready
+- Code review and refactoring (see sally-schoolwork PROGRESS.md for full list)
+- Merge `feature/livekit-agent-widget` into main when review is complete

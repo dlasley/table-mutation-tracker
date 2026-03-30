@@ -1,10 +1,12 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   LiveKitRoom,
   RoomAudioRenderer,
   useVoiceAssistant,
+  useRoomContext,
   BarVisualizer,
   DisconnectButton,
   VideoTrack,
@@ -16,6 +18,29 @@ const LIVEKIT_URL = process.env.NEXT_PUBLIC_LIVEKIT_URL || "";
 interface ConnectionDetails {
   serverUrl: string;
   participantToken: string;
+}
+
+function NavigationHandler() {
+  const room = useRoomContext();
+  const router = useRouter();
+
+  useEffect(() => {
+    room.localParticipant.registerRpcMethod(
+      "navigateTo",
+      async (data: { payload: string }) => {
+        const { view, date, className } = JSON.parse(data.payload);
+        if (view === "calendar") {
+          router.push("/");
+        } else if (date) {
+          const classParam = className ? `?class=${className}` : "";
+          router.push(`/day/${date}${classParam}`);
+        }
+        return JSON.stringify({ ok: true });
+      }
+    );
+  }, [room, router]);
+
+  return null;
 }
 
 function AgentPanel() {
@@ -133,6 +158,7 @@ export default function AgentWidget() {
               audio={true}
               onDisconnected={disconnect}
             >
+              <NavigationHandler />
               <AgentPanel />
             </LiveKitRoom>
           ) : (

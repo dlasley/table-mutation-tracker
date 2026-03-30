@@ -6,10 +6,12 @@ export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ date: string }>;
+  searchParams: Promise<{ [key: string]: string | undefined }>;
 }
 
-export default async function DayPage({ params }: PageProps) {
+export default async function DayPage({ params, searchParams }: PageProps) {
   const { date } = await params;
+  const search = await searchParams;
   const index = await loadRollingIndex();
 
   // Find all snapshots for this date, redirect to the latest
@@ -25,5 +27,10 @@ export default async function DayPage({ params }: PageProps) {
   }
 
   const latest = daySnapshots[daySnapshots.length - 1];
-  redirect(`/day/${date}/${formatTime(latest.time)}`);
+  // Preserve query params (e.g., ?class=) through the redirect
+  const queryString = new URLSearchParams(
+    Object.fromEntries(Object.entries(search).filter(([, v]) => v !== undefined) as [string, string][])
+  ).toString();
+  const qs = queryString ? `?${queryString}` : "";
+  redirect(`/day/${date}/${formatTime(latest.time)}${qs}`);
 }

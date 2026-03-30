@@ -60,6 +60,16 @@ function AgentPanel() {
   );
 }
 
+function getDeviceId(): string {
+  const key = "sally_device_id";
+  let id = localStorage.getItem(key);
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(key, id);
+  }
+  return id;
+}
+
 export default function AgentWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [connectionDetails, setConnectionDetails] =
@@ -70,6 +80,7 @@ export default function AgentWidget() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        participant_identity: getDeviceId(),
         room_config: {
           agents: [{ agent_name: "my-agent" }],
         },

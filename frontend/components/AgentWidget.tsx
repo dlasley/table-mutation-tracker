@@ -7,6 +7,7 @@ import {
   useVoiceAssistant,
   BarVisualizer,
   DisconnectButton,
+  VideoTrack,
 } from "@livekit/components-react";
 import "@livekit/components-styles";
 
@@ -18,7 +19,7 @@ interface ConnectionDetails {
 }
 
 function AgentPanel() {
-  const { state, audioTrack } = useVoiceAssistant();
+  const { state, audioTrack, videoTrack } = useVoiceAssistant();
 
   const stateLabel: Record<string, string> = {
     disconnected: "Disconnected",
@@ -31,14 +32,23 @@ function AgentPanel() {
 
   return (
     <div className="flex flex-col items-center gap-3 p-4">
-      <div className="w-full h-16">
-        <BarVisualizer
-          state={state}
-          barCount={5}
-          trackRef={audioTrack}
-          className="w-full h-full"
-        />
-      </div>
+      {videoTrack ? (
+        <div className="w-full aspect-square rounded overflow-hidden bg-black">
+          <VideoTrack
+            trackRef={videoTrack}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      ) : (
+        <div className="w-full h-16">
+          <BarVisualizer
+            state={state}
+            barCount={5}
+            trackRef={audioTrack}
+            className="w-full h-full"
+          />
+        </div>
+      )}
       <p className="text-xs text-gray-500 dark:text-gray-400">
         {stateLabel[state] || state}
       </p>

@@ -25,19 +25,22 @@ function NavigationHandler() {
   const router = useRouter();
 
   useEffect(() => {
-    room.localParticipant.registerRpcMethod(
-      "navigateTo",
-      async (data: { payload: string }) => {
-        const { view, date, className } = JSON.parse(data.payload);
-        if (view === "calendar") {
-          router.push("/");
-        } else if (date) {
-          const classParam = className ? `?class=${className}` : "";
-          router.push(`/day/${date}${classParam}`);
-        }
-        return JSON.stringify({ ok: true });
+    const handler = async (data: { payload: string }) => {
+      const { view, date, className } = JSON.parse(data.payload);
+      if (view === "calendar") {
+        router.push("/");
+      } else if (date) {
+        const classParam = className ? `?class=${className}` : "";
+        router.push(`/day/${date}${classParam}`);
       }
-    );
+      return JSON.stringify({ ok: true });
+    };
+
+    room.localParticipant.registerRpcMethod("navigateTo", handler);
+
+    return () => {
+      room.localParticipant.unregisterRpcMethod("navigateTo");
+    };
   }, [room, router]);
 
   return null;
@@ -99,29 +102,35 @@ export default function AgentWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [connectionDetails, setConnectionDetails] =
     useState<ConnectionDetails | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const connect = useCallback(async () => {
-    const response = await fetch("/api/livekit-token", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        participant_identity: getDeviceId(),
-        room_config: {
-          agents: [{ agent_name: "my-agent" }],
-        },
-      }),
-    });
+    setError(null);
+    try {
+      const response = await fetch("/api/livekit-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          participant_identity: getDeviceId(),
+          room_config: {
+            agents: [{ agent_name: "my-agent" }],
+          },
+        }),
+      });
 
-    if (!response.ok) {
-      console.error("Failed to get token:", await response.text());
-      return;
+      if (!response.ok) {
+        setError("Connection failed. Try again.");
+        return;
+      }
+
+      const data = await response.json();
+      setConnectionDetails({
+        serverUrl: data.server_url,
+        participantToken: data.participant_token,
+      });
+    } catch {
+      setError("Connection failed. Try again.");
     }
-
-    const data = await response.json();
-    setConnectionDetails({
-      serverUrl: data.server_url,
-      participantToken: data.participant_token,
-    });
   }, []);
 
   const disconnect = useCallback(() => {
@@ -166,6 +175,9 @@ export default function AgentWidget() {
               <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
                 Ask Sally about your grades, assignments, and changes.
               </p>
+              {error && (
+                <p className="text-xs text-red-500">{error}</p>
+              )}
               <button
                 onClick={connect}
                 className="px-4 py-2 text-sm rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors"

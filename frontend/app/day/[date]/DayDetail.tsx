@@ -41,6 +41,13 @@ export default function DayDetail({
     (classFromUrl && slugs.includes(classFromUrl) ? classFromUrl : slugs[0]) || ""
   );
 
+  // React to ?class= param changes (e.g., agent navigation to same page, different class)
+  useEffect(() => {
+    if (classFromUrl && slugs.includes(classFromUrl)) {
+      setActiveSlug(classFromUrl);
+    }
+  }, [classFromUrl, slugs]);
+
   // Comparison state: URL ?compare= param takes priority, then previous_snapshot default
   const compareFromUrl = searchParams.get("compare");
   const [compareRef, setCompareRefState] = useState<string | null>(

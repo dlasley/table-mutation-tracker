@@ -29,6 +29,8 @@ function NavigationHandler() {
       const { view, date, className } = JSON.parse(data.payload);
       if (view === "calendar") {
         router.push("/");
+      } else if (className === "help") {
+        router.push("/help");
       } else if (date) {
         const classParam = className ? `?class=${className}` : "";
         router.push(`/day/${date}${classParam}`);

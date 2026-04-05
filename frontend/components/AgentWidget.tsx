@@ -26,14 +26,17 @@ function NavigationHandler() {
 
   useEffect(() => {
     const handler = async (data: { payload: string }) => {
-      const { view, date, className } = JSON.parse(data.payload);
+      const { view, date, className, compareDate } = JSON.parse(data.payload);
       if (className === "help") {
         router.push("/help");
       } else if (view === "calendar") {
         router.push("/");
       } else if (date) {
-        const classParam = className ? `?class=${className}` : "";
-        router.push(`/day/${date}${classParam}`);
+        const params = new URLSearchParams();
+        if (className) params.set("class", className);
+        if (compareDate) params.set("compare", compareDate);
+        const qs = params.toString();
+        router.push(`/day/${date}${qs ? `?${qs}` : ""}`);
       }
       return JSON.stringify({ ok: true });
     };

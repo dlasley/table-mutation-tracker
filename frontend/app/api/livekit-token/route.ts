@@ -23,11 +23,16 @@ export async function POST(request: NextRequest) {
     const participantName = body.participant_name || "Student";
     const roomConfig = body.room_config;
 
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+
     const at = new AccessToken(apiKey, apiSecret, {
       identity: participantIdentity,
       name: participantName,
       metadata: body.participant_metadata || "",
-      attributes: body.participant_attributes || {},
+      attributes: { ...(body.participant_attributes || {}), ip_address: ip },
       ttl: "10m",
     });
 

@@ -27,10 +27,10 @@ function NavigationHandler() {
   useEffect(() => {
     const handler = async (data: { payload: string }) => {
       const { view, date, className } = JSON.parse(data.payload);
-      if (view === "calendar") {
-        router.push("/");
-      } else if (className === "help") {
+      if (className === "help") {
         router.push("/help");
+      } else if (view === "calendar") {
+        router.push("/");
       } else if (date) {
         const classParam = className ? `?class=${className}` : "";
         router.push(`/day/${date}${classParam}`);
@@ -100,11 +100,18 @@ function getDeviceId(): string {
   return id;
 }
 
+const PERSONAS = [
+  { value: "avatar1", label: "Human 1" },
+  { value: "avatar2", label: "Freyja" },
+  { value: "avatar3", label: "Human 2" },
+];
+
 export default function AgentWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [connectionDetails, setConnectionDetails] =
     useState<ConnectionDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedPersona, setSelectedPersona] = useState("avatar2");
 
   const connect = useCallback(async () => {
     setError(null);
@@ -114,6 +121,7 @@ export default function AgentWidget() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           participant_identity: getDeviceId(),
+          participant_metadata: JSON.stringify({ persona: selectedPersona }),
           room_config: {
             agents: [{ agent_name: "my-agent" }],
           },
@@ -133,7 +141,7 @@ export default function AgentWidget() {
     } catch {
       setError("Connection failed. Try again.");
     }
-  }, []);
+  }, [selectedPersona]);
 
   const disconnect = useCallback(() => {
     setConnectionDetails(null);
@@ -177,6 +185,17 @@ export default function AgentWidget() {
               <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
                 Ask Sally about your grades, assignments, and changes.
               </p>
+              <select
+                value={selectedPersona}
+                onChange={(e) => setSelectedPersona(e.target.value)}
+                className="w-full px-3 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+              >
+                {PERSONAS.map((p) => (
+                  <option key={p.value} value={p.value}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
               {error && (
                 <p className="text-xs text-red-500">{error}</p>
               )}
@@ -193,21 +212,10 @@ export default function AgentWidget() {
 
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg flex items-center justify-center transition-colors"
+        className="px-3 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg text-sm font-medium transition-colors"
         aria-label={isOpen ? "Close Sally" : "Talk to Sally"}
       >
-        {isOpen ? (
-          <span className="text-lg">&times;</span>
-        ) : (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            className="w-6 h-6"
-          >
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10h5v-2h-5c-4.34 0-8-3.66-8-8s3.66-8 8-8 8 3.66 8 8v1.43c0 .79-.71 1.57-1.5 1.57s-1.5-.78-1.5-1.57V12c0-2.76-2.24-5-5-5s-5 2.24-5 5 2.24 5 5 5c1.38 0 2.64-.56 3.54-1.47.65.89 1.77 1.47 2.96 1.47 1.97 0 3.5-1.6 3.5-3.57V12c0-5.52-4.48-10-10-10zm0 13c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z" />
-          </svg>
-        )}
+        {isOpen ? <span>&times;</span> : "Sally Schoolwork"}
       </button>
     </div>
   );

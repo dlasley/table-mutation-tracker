@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import SuperUserProvider from "@/components/SuperUserProvider";
 import HeaderTitle from "@/components/HeaderTitle";
+import AgentWidget from "@/components/AgentWidget";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -36,6 +37,7 @@ export default function RootLayout({
             </header>
             <main className="p-6">{children}</main>
           </div>
+          <AgentWidget />
         </SuperUserProvider>
       </body>
     </html>

@@ -36,7 +36,17 @@ export default function DayDetail({
   const pathname = usePathname();
 
   const slugs = useMemo(() => Object.keys(snapshot.classes), [snapshot.classes]);
-  const [activeSlug, setActiveSlug] = useState(slugs[0] || "");
+  const classFromUrl = searchParams.get("class");
+  const [activeSlug, setActiveSlug] = useState(
+    (classFromUrl && slugs.includes(classFromUrl) ? classFromUrl : slugs[0]) || ""
+  );
+
+  // React to ?class= param changes (e.g., agent navigation to same page, different class)
+  useEffect(() => {
+    if (classFromUrl && slugs.includes(classFromUrl)) {
+      setActiveSlug(classFromUrl);
+    }
+  }, [classFromUrl, slugs]);
 
   // Comparison state: URL ?compare= param takes priority, then previous_snapshot default
   const compareFromUrl = searchParams.get("compare");

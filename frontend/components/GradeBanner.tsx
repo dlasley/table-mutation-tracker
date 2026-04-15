@@ -1,6 +1,5 @@
 "use client";
 
-import { useSuperUser } from "./SuperUserProvider";
 import { gradeColor } from "@/lib/format";
 import type { ClassSummary } from "@/lib/types";
 
@@ -9,9 +8,6 @@ interface GradeBannerProps {
 }
 
 export default function GradeBanner({ classes }: GradeBannerProps) {
-  const superUser = useSuperUser();
-  if (!superUser) return null;
-
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
       {Object.entries(classes).map(([slug, cls]) => (

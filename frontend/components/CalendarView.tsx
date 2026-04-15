@@ -5,7 +5,6 @@ import Link from "next/link";
 import type { SnapshotEntry } from "@/lib/types";
 import { formatTime } from "@/lib/format";
 import { useLocalSnapshots } from "@/hooks/useLocalSnapshots";
-import { useSuperUser } from "./SuperUserProvider";
 
 interface CalendarViewProps {
   snapshots: SnapshotEntry[];
@@ -28,8 +27,6 @@ export default function CalendarView({
   const [year, setYear] = useState(initialYear);
   const [month, setMonth] = useState(initialMonth);
   const { latestByDate, latestLocalDate } = useLocalSnapshots(snapshots);
-  const superUser = useSuperUser();
-
   // Adjust view month to the latest snapshot's local date after mount
   useEffect(() => {
     if (latestLocalDate) {
@@ -103,13 +100,11 @@ export default function CalendarView({
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-orange-100 dark:bg-orange-900 inline-block" /> Changed</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-100 dark:bg-red-900 inline-block" /> Deleted</span>
       </div>
-      {superUser && (
-        <div className="mt-2 text-center">
-          <Link href="/deleted" className="text-xs text-red-500 hover:underline">
-            View deleted assignments
-          </Link>
-        </div>
-      )}
+      <div className="mt-2 text-center">
+        <Link href="/deleted" className="text-xs text-red-500 hover:underline">
+          View deleted assignments
+        </Link>
+      </div>
     </div>
   );
 }

@@ -14,6 +14,7 @@ config/sources.json
 # Node / Next.js
 frontend/node_modules/
 frontend/.next/
+.next/
 .vercel
 
 # n8n

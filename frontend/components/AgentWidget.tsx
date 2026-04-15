@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   LiveKitRoom,
@@ -29,6 +29,8 @@ function NavigationHandler() {
       const { view, date, className, compareDate } = JSON.parse(data.payload);
       if (className === "help") {
         router.push("/help");
+      } else if (className === "deleted") {
+        router.push("/deleted");
       } else if (view === "calendar") {
         router.push("/");
       } else if (date) {
@@ -103,7 +105,11 @@ function getDeviceId(): string {
   return id;
 }
 
-const PERSONAS = [
+const PUBLIC_PERSONAS = [
+  { value: "demo", label: "Sally Schoolwork" },
+];
+
+const PRIVATE_PERSONAS = [
   { value: "avatar1", label: "Human 1" },
   { value: "avatar2", label: "Freyja" },
   { value: "avatar3", label: "Human 2" },
@@ -114,7 +120,29 @@ export default function AgentWidget() {
   const [connectionDetails, setConnectionDetails] =
     useState<ConnectionDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [selectedPersona, setSelectedPersona] = useState("avatar2");
+  const [superuser, setSuperuser] = useState(false);
+  const [selectedPersona, setSelectedPersona] = useState("demo");
+
+  const personas = superuser
+    ? [...PUBLIC_PERSONAS, ...PRIVATE_PERSONAS]
+    : PUBLIC_PERSONAS;
+
+  // Triple-tap on header to toggle superuser mode
+  const tapRef = useRef<{ count: number; timer: ReturnType<typeof setTimeout> | null }>({
+    count: 0,
+    timer: null,
+  });
+  const handleHeaderTap = () => {
+    tapRef.current.count++;
+    if (tapRef.current.timer) clearTimeout(tapRef.current.timer);
+    tapRef.current.timer = setTimeout(() => {
+      tapRef.current.count = 0;
+    }, 500);
+    if (tapRef.current.count >= 3) {
+      setSuperuser((prev) => !prev);
+      tapRef.current.count = 0;
+    }
+  };
 
   const connect = useCallback(async () => {
     setError(null);
@@ -159,7 +187,7 @@ export default function AgentWidget() {
       {isOpen && (
         <div className="mb-2 w-72 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden">
           <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-            <span className="text-sm font-medium">Sally</span>
+            <span className="text-sm font-medium cursor-default select-none" onClick={handleHeaderTap}>Sally</span>
             <button
               onClick={() => {
                 disconnect();
@@ -188,17 +216,19 @@ export default function AgentWidget() {
               <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
                 Ask Sally about your grades, assignments, and changes.
               </p>
-              <select
-                value={selectedPersona}
-                onChange={(e) => setSelectedPersona(e.target.value)}
-                className="w-full px-3 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
-              >
-                {PERSONAS.map((p) => (
-                  <option key={p.value} value={p.value}>
-                    {p.label}
-                  </option>
-                ))}
-              </select>
+              {personas.length > 1 && (
+                <select
+                  value={selectedPersona}
+                  onChange={(e) => setSelectedPersona(e.target.value)}
+                  className="w-full px-3 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+                >
+                  {personas.map((p) => (
+                    <option key={p.value} value={p.value}>
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
+              )}
               {error && (
                 <p className="text-xs text-red-500">{error}</p>
               )}

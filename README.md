@@ -47,6 +47,21 @@ The system is decomposed into four isolated runtime boundaries deployed across n
                          │  -Calendar UI        │
                          │  -Client-side diffs  │
                          │  -SSR from storage   │
+                         │  -Voice agent widget │
+                         └──────┬───────────────┘
+                                │
+                     LiveKit    │ (voice/video)
+                                ▼
+                         ┌──────────────────────┐
+                         │  VOICE AGENT         │
+                         │  LiveKit Cloud       │
+                         │                      │
+                         │  sally-schoolwork    │
+                         │  (separate repo)     │
+                         │  -Voice/text Q&A     │
+                         │  -Avatar (lip-sync)  │
+                         │  -Browser navigation │
+                         │   via RPC            │
                          └──────────────────────┘
 ```
 
@@ -125,7 +140,11 @@ table-mutation-tracker/
 │       └── normalize.py     # Date, score, grade normalization
 ├── frontend/
 │   ├── app/                 # Next.js App Router (calendar + day views)
-│   ├── components/          # CalendarView, DiffTable, ClassTabs, ChangeLegend, etc.
+│   │   ├── api/livekit-token/ # Server-side JWT generation for agent dispatch
+│   │   └── help/            # Agent capabilities page (navigated to via RPC)
+│   ├── components/
+│   │   ├── AgentWidget.tsx  # Floating voice/video widget with connect/disconnect
+│   │   ├── CalendarView, DiffTable, ClassTabs, ChangeLegend, etc.
 │   ├── lib/
 │   │   ├── diff.ts          # Client-side assignment diffing engine
 │   │   ├── snapshots.ts     # GitHub API data fetching
@@ -134,7 +153,7 @@ table-mutation-tracker/
 ├── config/
 │   └── sources.json         # SIS URLs and class definitions
 ├── scripts/
-│   ├── generate_synthetic.py  # Test data generator (--days N, pushes to data repo)
+│   ├── generate_synthetic.py  # Test data generator (--days N --clean, pushes to data repo)
 │   └── rebuild_index.py       # CLI to rebuild rolling index from existing snapshots
 ├── Dockerfile               # Playwright + Chromium containerized scraper
 ├── docker-compose.yml       # Caddy + n8n deployment (GCE)
@@ -161,6 +180,10 @@ table-mutation-tracker/
 | `DATA_REPO`    | GitHub data repo (`owner/repo` format) |
 | `DATA_PREFIX`  | Namespace for data paths. Empty for production, `synthetic` for preview deployments |
 | `BASIC_AUTH_CREDENTIALS` | Single `user:pass` for HTTP basic auth. Scope per environment in Vercel. Unset = no auth |
+| `NEXT_PUBLIC_LIVEKIT_URL` | LiveKit Cloud WebSocket URL (for agent widget) |
+| `LIVEKIT_URL` | LiveKit Cloud WebSocket URL (server-side token generation) |
+| `LIVEKIT_API_KEY` | LiveKit API key (server-side token generation) |
+| `LIVEKIT_API_SECRET` | LiveKit API secret (server-side token generation) |
 
 ### n8n + Caddy
 
@@ -202,6 +225,22 @@ docker compose up -d
 ### Frontend
 
 Deployed via Vercel with auto-deploy from this repo. Set `GITHUB_TOKEN`, `DATA_REPO`, and `DATA_PREFIX` in Vercel environment settings.
+
+## Voice Agent Integration
+
+A LiveKit-powered voice agent ("Sally Schoolwork") is embedded as a floating widget in the frontend. Users ask questions about grades, assignments, and changes by voice; the agent answers conversationally and auto-navigates the browser to relevant views via LiveKit RPC.
+
+The agent backend lives in a separate repo ([sally-schoolwork](https://github.com/dlasley/sally-schoolwork)). This repo provides the frontend widget and RPC navigation handler. See [LIVEKIT_AGENT.md](LIVEKIT_AGENT.md) for integration details and [PROGRESS_LIVEKIT.md](PROGRESS_LIVEKIT.md) for current status.
+
+**Frontend components:**
+- `AgentWidget.tsx` — floating widget with video/audio rendering, persona selector, connect/disconnect
+- `NavigationHandler` — registers `navigateTo` RPC method, calls `router.push()` on agent request
+- `/api/livekit-token` — server-side JWT generation with `RoomAgentDispatch`
+- `/help` — capabilities page the agent navigates to after onboarding
+
+**Environment variables** (add to `frontend/.env.local`):
+- `NEXT_PUBLIC_LIVEKIT_URL` — LiveKit Cloud WebSocket URL
+- `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` — server-side token generation
 
 ## Development Philosophy
 

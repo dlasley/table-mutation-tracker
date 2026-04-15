@@ -17,7 +17,7 @@ frontend/.next/
 .vercel
 
 # n8n
-n8n/table-mutation-data-orchestrator.json  
+# (workflow JSON is committed with secrets replaced by {{PLACEHOLDER}} tokens)
 
 # OS
 .DS_Store

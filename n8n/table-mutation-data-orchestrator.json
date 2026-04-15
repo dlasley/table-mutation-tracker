@@ -1,0 +1,414 @@
+{
+  "name": "table-mutation-data-orchestrator",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 16
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -384,
+        -48
+      ],
+      "id": "2e7e8bc3-b30e-4feb-b6ca-0b13bb3a707a",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "{{SCRAPER_URL}}/scrape",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Webhook-Secret",
+              "value": "{{WEBHOOK_SECRET}}"
+            },
+            {}
+          ]
+        },
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -160,
+        -48
+      ],
+      "id": "a79d9c25-2da3-42c1-be99-0cefcbcc5811",
+      "name": "Scrape Tables",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "bc0eacec-ea92-4023-a8f8-cdb1bc63b975",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "success",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        64,
+        -48
+      ],
+      "id": "54b75c0e-fbb3-4825-b0ae-66ebfbfda75d",
+      "name": "Scrape Success?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Split multi-table response\nconst scrapeData = $input.first().json.data;\n\nreturn scrapeData.classes.map(cls => ({\n  json: {\n    date: scrapeData.date,\n    time: scrapeData.time,\n    slug: cls.slug,\n    assignments: cls.assignments,\n    class_metadata: cls.metadata,\n    scrape_metadata: scrapeData.metadata,\n    scrape_timestamp: scrapeData.scrape_timestamp,\n    put_url: `https://api.github.com/repos/{{DATA_REPO}}/contents/snapshots/${scrapeData.date}/${scrapeData.time}/${cls.slug}/assignments.json`,\n    put_body: {\n      message: `snapshot ${scrapeData.date}/${scrapeData.time}: ${cls.slug}`,\n      content: Buffer.from(JSON.stringify(cls.assignments, null, 2) + '\\n').toString('base64'),\n      branch: 'main',\n    },\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        288,
+        -192
+      ],
+      "id": "2b2f7987-e18f-48e0-a17d-90198525cd65",
+      "name": "Split multi-table JSON response"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $json.put_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.put_body) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        736,
+        -96
+      ],
+      "id": "c5e873f2-96f3-4e71-9095-021f011a31d6",
+      "name": "PUT Table",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PwyEPxgpn4PNGYLU",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $json.put_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.put_body) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        960,
+        -288
+      ],
+      "id": "1d199c04-0e4a-417c-88d2-952d8cbb7b67",
+      "name": "PUT Snapshot Metadata",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PwyEPxgpn4PNGYLU",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Construct snapshot metadata JSON \nconst scrapeData = $('Scrape Tables').first().json.data;\n\nconst metadata = {\n  date: scrapeData.date,\n  time: scrapeData.time,\n  scrape_timestamp: scrapeData.scrape_timestamp,\n  classes: {},\n};\n\nfor (const cls of scrapeData.classes) {\n  metadata.classes[cls.slug] = cls.metadata;\n}\n\nreturn [{\n  json: {\n    put_url: `https://api.github.com/repos/{{DATA_REPO}}/contents/snapshots/${scrapeData.date}/${scrapeData.time}/metadata.json`,\n    put_body: {\n      message: `snapshot ${scrapeData.date}/${scrapeData.time}: metadata`,\n      content: Buffer.from(JSON.stringify(metadata, null, 2) + '\\n').toString('base64'),\n    },\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        736,
+        -288
+      ],
+      "id": "3b1e6ce5-6fa1-4480-8b54-b8c599994bdc",
+      "name": "Build Snapshot Metadata"
+    },
+    {
+      "parameters": {
+        "fromEmail": "{{NOTIFICATION_EMAIL}}",
+        "toEmail": "{{NOTIFICATION_EMAIL}}",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "text",
+        "text": "={{ $json.message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        528,
+        160
+      ],
+      "id": "3298afcf-78e0-491b-b77a-875666d3cd3e",
+      "name": "Send an Email",
+      "webhookId": "ad25ed50-37ae-4a87-99ff-79b3b58e1ffe",
+      "credentials": {
+        "smtp": {
+          "id": "a2AjEHEMugzouCvi",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        512,
+        -192
+      ],
+      "id": "20d83b75-19e7-4ad1-b756-532ae51d7b2c",
+      "name": "Process Tables"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $('Scrape Tables').first().json;\n\nreturn [{\n  json: {\n    subject: `SIS Scraper Failed - ${new Date().toLocaleDateString()}`,\n    message: `The SIS scrape failed.\\n\\nError: ${response.error || 'Unknown error'}\\n\\nTraceback:\\n${response.traceback || 'No traceback available'}`,\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        288,
+        0
+      ],
+      "id": "18266b0c-c9a3-472a-b5bc-a2212ccff5b6",
+      "name": "Scrape Error Formatting"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "{{SCRAPER_URL}}/rebuild-index",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Webhook-Secret",
+              "value": "{{WEBHOOK_SECRET}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1168,
+        -288
+      ],
+      "id": "16c2d9a8-8647-4d46-bdbc-3bb720f21052",
+      "name": "Rebuild Index",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $('Rebuild Index').first().json;\n\nreturn [{\n  json: {\n    subject: `SIS Rolling Index Rebuild Failed - ${new Date().toLocaleDateString()}`,\n    message: `Failed to rebuild rolling index.\\n\\nStatus: ${response.status || 'Unknown'}\\n\\nError: ${response.error || 'Unknown'}\\n\\nTraceback:\\n${response.traceback || 'Not available'}`,\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        160
+      ],
+      "id": "161321ee-4a85-41c7-bfad-7ac933ab3ef6",
+      "name": "Rebuild Index Error Formatting"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Scrape Tables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape Tables": {
+      "main": [
+        [
+          {
+            "node": "Scrape Success?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape Success?": {
+      "main": [
+        [
+          {
+            "node": "Split multi-table JSON response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Scrape Error Formatting",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split multi-table JSON response": {
+      "main": [
+        [
+          {
+            "node": "Process Tables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PUT Table": {
+      "main": [
+        [
+          {
+            "node": "Process Tables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PUT Snapshot Metadata": {
+      "main": [
+        [
+          {
+            "node": "Rebuild Index",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Snapshot Metadata": {
+      "main": [
+        [
+          {
+            "node": "PUT Snapshot Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Tables": {
+      "main": [
+        [
+          {
+            "node": "Build Snapshot Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "PUT Table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape Error Formatting": {
+      "main": [
+        [
+          {
+            "node": "Send an Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rebuild Index": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Rebuild Index Error Formatting",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rebuild Index Error Formatting": {
+      "main": [
+        [
+          {
+            "node": "Send an Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "availableInMCP": false
+  },
+  "versionId": "aec4f009-ab92-42bc-9ab4-550cb587a001",
+  "meta": {
+    "instanceId": "499d18731464cb58b4bf2976cfd7b46fad669522ac8bcf94a66640594f38a94d"
+  },
+  "id": "29TPdmjoU2SiZMeK",
+  "tags": []
+}

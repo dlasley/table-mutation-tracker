@@ -1,6 +1,5 @@
 "use client";
 
-import { useSuperUser } from "./SuperUserProvider";
 import { gradeColor } from "@/lib/format";
 import type { ClassSummary, AssignmentChange } from "@/lib/types";
 
@@ -12,8 +11,6 @@ interface ClassTabsProps {
 }
 
 export default function ClassTabs({ classes, activeSlug, onSelect, changes = [] }: ClassTabsProps) {
-  const superUser = useSuperUser();
-
   // Per-class change counts
   const countsBySlug = new Map<string, { added: number; modified: number; deleted: number }>();
   for (const c of changes) {
@@ -40,11 +37,9 @@ export default function ClassTabs({ classes, activeSlug, onSelect, changes = [] 
             }`}
           >
             {cls.course}
-            {superUser && (
-              <span className={`ml-1.5 font-bold ${gradeColor(cls.final_grade)}`}>
-                {cls.final_grade ?? "--"}
-              </span>
-            )}
+            <span className={`ml-1.5 font-bold ${gradeColor(cls.final_grade)}`}>
+              {cls.final_grade ?? "--"}
+            </span>
             {counts && (
               <span className="ml-1.5 text-xs font-mono">
                 {counts.added > 0 && (

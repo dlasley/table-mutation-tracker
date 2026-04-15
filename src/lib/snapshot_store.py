@@ -120,11 +120,18 @@ class SnapshotStore(ABC):
             "assignment_changes": assignment_changes,
         }
 
-    async def rebuild_rolling_index(self) -> dict:
+    async def rebuild_rolling_index(
+        self,
+        class_weights: dict[str, dict] | None = None,
+    ) -> dict:
         """Scan all snapshots and rebuild the rolling index.
 
         Computes changelogs on the fly by diffing consecutive snapshots.
         Writes the result via write_rolling_index.
+
+        class_weights: optional dict keyed by slug, each value a dict with
+            "weight" ("regular"|"honors"|"ap"|"excluded") and
+            "override_grade" (str|None) used when final_grade is null.
         """
         all_snapshots = await self.list_snapshots()
         total = len(all_snapshots)
@@ -158,6 +165,8 @@ class SnapshotStore(ABC):
                     "assignment_count": cls_meta.get("assignment_count", 0),
                 }
 
+            gpa = _compute_gpa(classes, class_weights) if class_weights else None
+
             snapshots_list.append({
                 "date": date,
                 "time": time,
@@ -171,11 +180,51 @@ class SnapshotStore(ABC):
                     "total": change_total,
                 },
                 "classes": classes,
+                "gpa": gpa,
             })
 
         index = {"snapshots": snapshots_list}
         await self.write_rolling_index(index)
         return index
+
+
+_GRADE_POINTS: dict[str, float] = {
+    "A+": 4.0, "A": 4.0, "A-": 3.7,
+    "B+": 3.3, "B": 3.0, "B-": 2.7,
+    "C+": 2.3, "C": 2.0, "C-": 1.7,
+    "D+": 1.3, "D": 1.0, "D-": 0.7,
+    "F": 0.0,
+}
+_WEIGHT_BONUS: dict[str, float | None] = {
+    "regular": 0.0,
+    "honors": 0.5,
+    "ap": 1.0,
+    "excluded": None,
+}
+
+
+def _compute_gpa(
+    classes: dict[str, dict],
+    class_weights: dict[str, dict],
+) -> float | None:
+    """Compute weighted GPA from a snapshot's class data.
+
+    Uses gpa_weight ("regular"|"honors"|"ap"|"excluded") and
+    gpa_override_grade (fallback when final_grade is null, e.g. PE carry-forward).
+    Returns None if no gradeable classes are found.
+    """
+    total, count = 0.0, 0
+    for slug, cls in classes.items():
+        cfg = class_weights.get(slug, {})
+        bonus = _WEIGHT_BONUS.get(cfg.get("weight", "regular"))
+        if bonus is None:  # excluded
+            continue
+        grade = cls.get("final_grade") or cfg.get("override_grade")
+        if grade not in _GRADE_POINTS:
+            continue
+        total += _GRADE_POINTS[grade] + bonus
+        count += 1
+    return round(total / count, 2) if count else None
 
 
 def _diff_assignments(

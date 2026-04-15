@@ -17,6 +17,8 @@ load_dotenv(Path(__file__).parent / ".env")
 class ClassConfig:
     slug: str
     url: str
+    gpa_weight: str = "regular"       # "regular", "honors", "ap", "excluded"
+    gpa_override_grade: str | None = None  # fallback when final_grade is null
 
 
 @dataclass
@@ -54,6 +56,8 @@ def load_config(
             ClassConfig(
                 slug=c["slug"],
                 url=c["url"],
+                gpa_weight=c.get("gpa_weight", "regular"),
+                gpa_override_grade=c.get("gpa_override_grade"),
             )
             for c in source_data["classes"]
         ]

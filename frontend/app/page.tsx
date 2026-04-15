@@ -19,7 +19,7 @@ export default async function Home() {
       {latestSnap && (
         <>
           <LatestSnapshotLabel date={latestSnap.date} time={latestSnap.time} />
-          <GradeBanner classes={latestSnap.classes} />
+          <GradeBanner classes={latestSnap.classes} gpa={latestSnap.gpa} />
         </>
       )}
 

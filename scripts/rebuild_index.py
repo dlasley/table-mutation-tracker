@@ -22,7 +22,8 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 load_dotenv(PROJECT_ROOT / ".env")
 
-from scripts.lib.github_store import GitHubStore
+from src.config import load_config
+from src.lib.github_store import GitHubStore
 
 
 def main():
@@ -37,10 +38,17 @@ def main():
         print("Error: GITHUB_TOKEN and DATA_REPO must be set (in .env or environment)")
         sys.exit(1)
 
+    cfg = load_config()
+    class_weights = {
+        cls.slug: {"weight": cls.gpa_weight, "override_grade": cls.gpa_override_grade}
+        for source in cfg.sources.values()
+        for cls in source.classes
+    }
+
     store = GitHubStore(repo=repo, token=token)
 
     print(f"Rebuilding rolling index for {repo}...")
-    index = asyncio.run(store.rebuild_rolling_index())
+    index = asyncio.run(store.rebuild_rolling_index(class_weights=class_weights))
 
     # Filter by date range if specified
     if args.start_date or args.end_date:

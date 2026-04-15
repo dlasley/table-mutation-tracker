@@ -154,7 +154,7 @@ export default function DayDetail({
         </div>
       </div>
 
-      <GradeBanner classes={snapshot.classes} />
+      <GradeBanner classes={snapshot.classes} gpa={snapshot.gpa} />
 
       {/* Change summary */}
       {compareRef && changeCount > 0 && !loading && (

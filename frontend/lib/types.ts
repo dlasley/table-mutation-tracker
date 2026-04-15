@@ -20,6 +20,7 @@ export interface SnapshotEntry {
   previous_snapshot: string | null;
   changes: ChangeSummary;
   classes: Record<string, ClassSummary>;
+  gpa: number | null;
 }
 
 export interface RollingIndex {

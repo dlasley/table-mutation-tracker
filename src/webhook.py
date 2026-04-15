@@ -6,6 +6,7 @@ import traceback
 
 from fastapi import FastAPI, Header, HTTPException
 
+from src.config import load_config
 from src.lib.github_store import GitHubStore
 from src.main import run_scrape
 
@@ -78,8 +79,14 @@ async def rebuild_index(x_webhook_secret: str | None = Header(default=None)):
         )
 
     try:
+        cfg = load_config()
+        class_weights = {
+            cls.slug: {"weight": cls.gpa_weight, "override_grade": cls.gpa_override_grade}
+            for source in cfg.sources.values()
+            for cls in source.classes
+        }
         store = GitHubStore(repo=repo, token=token)
-        index = await store.rebuild_rolling_index()
+        index = await store.rebuild_rolling_index(class_weights=class_weights)
         total_changes = sum(s["changes"]["total"] for s in index["snapshots"])
         return {
             "status": "success",

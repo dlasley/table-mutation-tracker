@@ -5,21 +5,11 @@ import type { ClassSummary } from "@/lib/types";
 
 interface GradeBannerProps {
   classes: Record<string, ClassSummary>;
-  gpa?: number | null;
 }
 
-export default function GradeBanner({ classes, gpa }: GradeBannerProps) {
+export default function GradeBanner({ classes }: GradeBannerProps) {
   return (
-    <div className="space-y-3">
-      {gpa != null && (
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">GPA</span>
-          <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            {gpa.toFixed(2)}
-          </span>
-        </div>
-      )}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {Object.entries(classes).map(([slug, cls]) => (
           <div
             key={slug}
@@ -35,6 +25,5 @@ export default function GradeBanner({ classes, gpa }: GradeBannerProps) {
           </div>
         ))}
       </div>
-    </div>
   );
 }

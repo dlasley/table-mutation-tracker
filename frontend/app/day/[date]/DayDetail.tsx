@@ -6,7 +6,6 @@ import Link from "next/link";
 import ClassTabs from "@/components/ClassTabs";
 import DiffTable from "@/components/DiffTable";
 import ChangeLegend from "@/components/ChangeLegend";
-import GradeBanner from "@/components/GradeBanner";
 import SnapshotCalendarPicker from "@/components/SnapshotCalendarPicker";
 import type {
   SnapshotEntry,
@@ -154,7 +153,6 @@ export default function DayDetail({
         </div>
       </div>
 
-      <GradeBanner classes={snapshot.classes} gpa={snapshot.gpa} />
 
       {/* Change summary */}
       {compareRef && changeCount > 0 && !loading && (

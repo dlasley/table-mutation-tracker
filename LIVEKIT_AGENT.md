@@ -61,6 +61,7 @@ LIVEKIT_API_SECRET=your-api-secret
 - `DayDetail.tsx` reads `?class=` query param to auto-select a class tab
 - `page.tsx` (day route) preserves query params through the date→time redirect
 - Agent tools navigate the browser as a side effect of data lookups (no explicit user request needed)
+- RPC protocol contract documented in `sally-schoolwork/docs/CONTRACTS.md` with contract tests. The `navigateTo` payload schema, routing rules, and special className values (`help`, `deleted`) are defined there. Changes to the NavigationHandler in AgentWidget.tsx must maintain compatibility with that contract.
 
 ## Files added/modified
 

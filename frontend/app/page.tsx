@@ -15,15 +15,15 @@ export default async function Home() {
     : new Date();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {latestSnap && (
-        <>
+        <div className="space-y-2">
           <LatestSnapshotLabel date={latestSnap.date} time={latestSnap.time} />
           {latestSnap.gpa != null && (
-            <p className="text-sm text-gray-500 text-center">GPA {latestSnap.gpa.toFixed(2)}</p>
+            <p className="text-sm text-gray-500 text-center">GPA: {latestSnap.gpa.toFixed(2)}</p>
           )}
           <GradeBanner classes={latestSnap.classes} />
-        </>
+        </div>
       )}
 
       <CalendarView

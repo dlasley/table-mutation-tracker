@@ -125,7 +125,7 @@ export default function DayDetail({
   const changeCount = changes.length;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-4">
       <div>
         <Link
           href="/"
@@ -152,7 +152,6 @@ export default function DayDetail({
           )}
         </div>
       </div>
-
 
       {/* Change summary */}
       {compareRef && changeCount > 0 && !loading && (

@@ -35,7 +35,7 @@ export default function RootLayout({
             <header className="border-b border-gray-200 dark:border-gray-800 px-6 py-3">
               <HeaderTitle />
             </header>
-            <main className="p-6">{children}</main>
+            <main className="px-6 py-3">{children}</main>
           </div>
           <AgentWidget />
         </SuperUserProvider>

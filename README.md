@@ -114,7 +114,7 @@ index/
 
 A Next.js app on Vercel reads snapshots from the data repo via GitHub API. Change detection happens at two levels:
 
-- **Rolling index** (pre-computed): After each scrape, n8n calls the scraper's `/rebuild-index` endpoint, which diffs all consecutive snapshot pairs and writes change counts to the rolling index. The calendar view reads these counts to color-code days without fetching individual snapshots.
+- **Rolling index** (pre-computed): After each scrape, n8n calls the scraper's `/rebuild-index` endpoint, which diffs all consecutive snapshot pairs, writes change counts, and computes a weighted GPA to the rolling index. The calendar view reads these counts to color-code days without fetching individual snapshots.
 - **Detail view** (client-side): When a user clicks a day, the frontend fetches both snapshots and diffs them field-by-field, classifying changes as added, deleted, or modified.
 
 This keeps the frontend fully decoupled from both the scraper and n8n. It reads from storage and nothing else.
@@ -141,9 +141,11 @@ table-mutation-tracker/
 ├── frontend/
 │   ├── app/                 # Next.js App Router (calendar + day views)
 │   │   ├── api/livekit-token/ # Server-side JWT generation for agent dispatch
+│   │   ├── deleted/         # Deleted assignments history page
 │   │   └── help/            # Agent capabilities page (navigated to via RPC)
 │   ├── components/
 │   │   ├── AgentWidget.tsx  # Floating voice/video widget with connect/disconnect
+│   │   ├── GradeBanner.tsx  # Per-class grade cards + GPA display
 │   │   ├── CalendarView, DiffTable, ClassTabs, ChangeLegend, etc.
 │   ├── lib/
 │   │   ├── diff.ts          # Client-side assignment diffing engine
@@ -151,7 +153,7 @@ table-mutation-tracker/
 │   │   └── types.ts         # Shared TypeScript types
 │   └── hooks/               # Local snapshot state management
 ├── config/
-│   └── sources.json         # SIS URLs and class definitions
+│   └── sources.json         # SIS URLs, class definitions, GPA weights per class
 ├── scripts/
 │   ├── generate_synthetic.py  # Test data generator (--days N --clean, pushes to data repo)
 │   └── rebuild_index.py       # CLI to rebuild rolling index from existing snapshots
@@ -241,6 +243,10 @@ The agent backend lives in a separate repo ([sally-schoolwork](https://github.co
 **Environment variables** (add to `frontend/.env.local`):
 - `NEXT_PUBLIC_LIVEKIT_URL` — LiveKit Cloud WebSocket URL
 - `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` — server-side token generation
+
+## License
+
+MIT License. Copyright (c) 2026 David Lasley.
 
 ## Development Philosophy
 

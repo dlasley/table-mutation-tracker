@@ -5,10 +5,17 @@ import os
 import traceback
 
 from fastapi import FastAPI, Header, HTTPException
+from pydantic import BaseModel
 
 from src.config import load_config
 from src.lib.github_store import GitHubStore
+from src.lib.snapshot_store import OutOfOrderError
 from src.main import run_scrape
+
+
+class AppendIndexBody(BaseModel):
+    date: str
+    time: str
 
 app = FastAPI(title="SIS Assignment Tracker", docs_url=None, redoc_url=None)
 
@@ -99,6 +106,62 @@ async def rebuild_index(x_webhook_secret: str | None = Header(default=None)):
             "error": str(e),
             "traceback": traceback.format_exc(),
         }
+
+
+@app.post("/append-index")
+async def append_index(
+    body: AppendIndexBody,
+    x_webhook_secret: str | None = Header(default=None),
+):
+    """Append (or replace) one snapshot in the rolling index.
+
+    O(1) replacement for /rebuild-index in the daily n8n pipeline.
+    Returns 409 with status="needs-rebuild" if the snapshot is out of
+    order; n8n should then call /rebuild-index to fix the drift.
+    """
+    _verify_secret(x_webhook_secret)
+
+    token = os.environ.get("GITHUB_TOKEN")
+    repo = os.environ.get("DATA_REPO")
+    if not token or not repo:
+        raise HTTPException(
+            status_code=500,
+            detail="GITHUB_TOKEN and DATA_REPO must be configured",
+        )
+
+    cfg = load_config()
+    class_weights = {
+        cls.slug: {"weight": cls.gpa_weight, "override_grade": cls.gpa_override_grade}
+        for source in cfg.sources.values()
+        for cls in source.classes
+    }
+    store = GitHubStore(repo=repo, token=token)
+
+    try:
+        index = await store.append_to_rolling_index(
+            body.date, body.time, class_weights=class_weights
+        )
+    except OutOfOrderError as e:
+        raise HTTPException(
+            status_code=409,
+            detail={"status": "needs-rebuild", "reason": str(e)},
+        )
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e),
+            "traceback": traceback.format_exc(),
+        }
+
+    new_entry = next(
+        (s for s in index["snapshots"] if s["date"] == body.date and s["time"] == body.time),
+        None,
+    )
+    return {
+        "status": "success",
+        "snapshots": len(index["snapshots"]),
+        "entry": new_entry,
+    }
 
 
 @app.get("/health")

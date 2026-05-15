@@ -3,6 +3,12 @@
 from abc import ABC, abstractmethod
 
 
+class OutOfOrderError(Exception):
+    """Raised when append_to_rolling_index is called with a snapshot key
+    older than the last entry in the existing index. Caller should fall
+    back to rebuild_rolling_index() for a full reorder."""
+
+
 class SnapshotStore(ABC):
     """Storage interface for snapshot data.
 
@@ -138,54 +144,106 @@ class SnapshotStore(ABC):
         print(f"  Found {total} snapshots to index")
         snapshots_list = []
 
-        for i, (date, time) in enumerate(all_snapshots):
-            metadata = await self.read_metadata(date, time) or {}
-
-            # Compute changelog against previous snapshot
+        for i, key in enumerate(all_snapshots):
             previous = all_snapshots[i - 1] if i > 0 else None
-            changelog = await self.compute_changelog((date, time), previous)
-
-            class_changes = changelog.get("class_changes", [])
-            assignment_changes = changelog.get("assignment_changes", [])
-
-            added = sum(1 for c in assignment_changes if c["type"] == "added")
-            modified = sum(1 for c in assignment_changes if c["type"] == "modified")
-            deleted = sum(1 for c in assignment_changes if c["type"] == "deleted")
-
-            change_total = len(assignment_changes)
-            change_summary = f"+{added} ~{modified} -{deleted}" if change_total > 0 else "no changes"
-            print(f"  [{i+1}/{total}] {date}/{time}  {change_summary}")
-
-            classes = {}
-            for slug, cls_meta in metadata.get("classes", {}).items():
-                classes[slug] = {
-                    "course": cls_meta.get("course", slug),
-                    "final_grade": cls_meta.get("final_grade"),
-                    "final_percent": cls_meta.get("final_percent"),
-                    "assignment_count": cls_meta.get("assignment_count", 0),
-                }
-
-            gpa = _compute_gpa(classes, class_weights) if class_weights else None
-
-            snapshots_list.append({
-                "date": date,
-                "time": time,
-                "scrape_timestamp": metadata.get("scrape_timestamp"),
-                "previous_snapshot": f"{previous[0]}/{previous[1]}" if previous else None,
-                "changes": {
-                    "class_level": len(class_changes),
-                    "added": added,
-                    "modified": modified,
-                    "deleted": deleted,
-                    "total": change_total,
-                },
-                "classes": classes,
-                "gpa": gpa,
-            })
+            entry = await self._build_index_entry(key, previous, class_weights)
+            change_total = entry["changes"]["total"]
+            if change_total > 0:
+                ch = entry["changes"]
+                change_summary = f"+{ch['added']} ~{ch['modified']} -{ch['deleted']}"
+            else:
+                change_summary = "no changes"
+            print(f"  [{i+1}/{total}] {key[0]}/{key[1]}  {change_summary}")
+            snapshots_list.append(entry)
 
         index = {"snapshots": snapshots_list}
         await self.write_rolling_index(index)
         return index
+
+    async def append_to_rolling_index(
+        self,
+        date: str,
+        time: str,
+        class_weights: dict[str, dict] | None = None,
+    ) -> dict:
+        """Append (or replace) a single snapshot in the rolling index.
+
+        O(1) per-scrape alternative to rebuild_rolling_index. Idempotent:
+        re-appending the same (date, time) replaces the existing entry
+        in place rather than duplicating.
+
+        Raises OutOfOrderError if (date, time) is chronologically earlier
+        than the last entry in the existing index and not already present.
+        Caller should fall back to rebuild_rolling_index() in that case.
+        """
+        index = await self.read_rolling_index() or {"snapshots": []}
+        snaps = index["snapshots"]
+        new_key = (date, time)
+        keys = [(s["date"], s["time"]) for s in snaps]
+
+        if new_key in keys:
+            # Idempotent re-append: replace in place using the entry that came before.
+            idx = keys.index(new_key)
+            previous = keys[idx - 1] if idx > 0 else None
+            entry = await self._build_index_entry(new_key, previous, class_weights)
+            snaps[idx] = entry
+        elif keys and new_key < keys[-1]:
+            raise OutOfOrderError(
+                f"snapshot {date}/{time} is older than last index entry "
+                f"{keys[-1][0]}/{keys[-1][1]}; rebuild_rolling_index is required"
+            )
+        else:
+            previous = keys[-1] if keys else None
+            entry = await self._build_index_entry(new_key, previous, class_weights)
+            snaps.append(entry)
+
+        await self.write_rolling_index(index)
+        return index
+
+    async def _build_index_entry(
+        self,
+        key: tuple[str, str],
+        previous: tuple[str, str] | None,
+        class_weights: dict[str, dict] | None,
+    ) -> dict:
+        """Build one rolling-index entry for a given snapshot key."""
+        date, time = key
+        metadata = await self.read_metadata(date, time) or {}
+        changelog = await self.compute_changelog(key, previous)
+
+        class_changes = changelog.get("class_changes", [])
+        assignment_changes = changelog.get("assignment_changes", [])
+
+        added = sum(1 for c in assignment_changes if c["type"] == "added")
+        modified = sum(1 for c in assignment_changes if c["type"] == "modified")
+        deleted = sum(1 for c in assignment_changes if c["type"] == "deleted")
+
+        classes = {}
+        for slug, cls_meta in metadata.get("classes", {}).items():
+            classes[slug] = {
+                "course": cls_meta.get("course", slug),
+                "final_grade": cls_meta.get("final_grade"),
+                "final_percent": cls_meta.get("final_percent"),
+                "assignment_count": cls_meta.get("assignment_count", 0),
+            }
+
+        gpa = _compute_gpa(classes, class_weights) if class_weights else None
+
+        return {
+            "date": date,
+            "time": time,
+            "scrape_timestamp": metadata.get("scrape_timestamp"),
+            "previous_snapshot": f"{previous[0]}/{previous[1]}" if previous else None,
+            "changes": {
+                "class_level": len(class_changes),
+                "added": added,
+                "modified": modified,
+                "deleted": deleted,
+                "total": len(assignment_changes),
+            },
+            "classes": classes,
+            "gpa": gpa,
+        }
 
 
 _GRADE_POINTS: dict[str, float] = {

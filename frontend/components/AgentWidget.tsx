@@ -105,44 +105,31 @@ function getDeviceId(): string {
   return id;
 }
 
-const PUBLIC_PERSONAS = [
+const ALL_PERSONAS = [
+  { value: "demo", label: "Demo" },
+  { value: "avatar1", label: "Human 1" },
+  { value: "avatar3", label: "Human 2" },
+  { value: "avatar2", label: "Dog 1" },
+];
+
+const LOCKED_PERSONAS = [
   { value: "demo", label: "Sally Schoolwork" },
 ];
 
-const PRIVATE_PERSONAS = [
-  { value: "avatar1", label: "Human 1" },
-  { value: "avatar2", label: "Freyja" },
-  { value: "avatar3", label: "Human 2" },
-];
+// NEXT_PUBLIC_AGENT_LOCKED_PERSONA controls persona selection mode
+// true (default): only demo persona available, no dropdown
+// false: all 4 personas selectable via dropdown
+const AGENT_LOCKED_PERSONA =
+  process.env.NEXT_PUBLIC_AGENT_LOCKED_PERSONA !== "false";
 
 export default function AgentWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [connectionDetails, setConnectionDetails] =
     useState<ConnectionDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [superuser, setSuperuser] = useState(false);
   const [selectedPersona, setSelectedPersona] = useState("demo");
 
-  const personas = superuser
-    ? [...PUBLIC_PERSONAS, ...PRIVATE_PERSONAS]
-    : PUBLIC_PERSONAS;
-
-  // Triple-tap on header to toggle superuser mode
-  const tapRef = useRef<{ count: number; timer: ReturnType<typeof setTimeout> | null }>({
-    count: 0,
-    timer: null,
-  });
-  const handleHeaderTap = () => {
-    tapRef.current.count++;
-    if (tapRef.current.timer) clearTimeout(tapRef.current.timer);
-    tapRef.current.timer = setTimeout(() => {
-      tapRef.current.count = 0;
-    }, 500);
-    if (tapRef.current.count >= 3) {
-      setSuperuser((prev) => !prev);
-      tapRef.current.count = 0;
-    }
-  };
+  const personas = AGENT_LOCKED_PERSONA ? LOCKED_PERSONAS : ALL_PERSONAS;
 
   const connect = useCallback(async () => {
     setError(null);
@@ -187,7 +174,7 @@ export default function AgentWidget() {
       {isOpen && (
         <div className="mb-2 w-72 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden">
           <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-            <span className="text-sm font-medium cursor-default select-none" onClick={handleHeaderTap}>Sally</span>
+            <span className="text-sm font-medium">Sally</span>
             <button
               onClick={() => {
                 disconnect();

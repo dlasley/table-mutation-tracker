@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "n8n": {
+      "command": "npx",
+      "args": ["-y", "n8n-mcp"],
+      "env": {
+        "N8N_API_URL": "${N8N_API_URL}",
+        "N8N_API_KEY": "${N8N_API_KEY}"
+      }
+    },
+    "_comment": "n8n-mcp (czlonkowski/n8n-mcp) exposes node-knowledge tools plus full read-write workflow management via the n8n public REST API. Destructive operations (delete workflow/credential, etc.) are gated by Claude Code approval prompts. Configure N8N_API_URL and N8N_API_KEY in .env (or your shell). Disable by removing this file or commenting the server entry."
+  }
+}

@@ -242,18 +242,9 @@
         "url": "https://7gepqpxnpf.us-east-1.awsapprunner.com/append-index",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
         "sendBody": true,
-        "contentType": "raw",
-        "body": "={{ JSON.stringify({ date: $('Scrape Tables').first().json.data.date, time: $('Scrape Tables').first().json.data.time }) }}",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ date: $('Scrape Tables').first().json.data.date, time: $('Scrape Tables').first().json.data.time }) }}",
         "options": {
           "timeout": 30000
         }
@@ -516,7 +507,7 @@
     "availableInMCP": false,
     "callerPolicy": "workflowsFromSameOwner"
   },
-  "versionId": "5c3b74ac-d422-4159-8463-cab8e039c64b",
+  "versionId": "d0c8e2f7-5147-4564-9489-21087e579a4a",
   "meta": null,
   "id": "29TPdmjoU2SiZMeK",
   "tags": []

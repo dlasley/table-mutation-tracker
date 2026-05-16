@@ -15,7 +15,7 @@
       "typeVersion": 1.3,
       "position": [
         -384,
-        -48
+        48
       ],
       "id": "2e7e8bc3-b30e-4feb-b6ca-0b13bb3a707a",
       "name": "Schedule Trigger"
@@ -23,13 +23,13 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "{{SCRAPER_URL}}/scrape",
+        "url": "https://7gepqpxnpf.us-east-1.awsapprunner.com/scrape",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "X-Webhook-Secret",
-              "value": "{{WEBHOOK_SECRET}}"
+              "value": "REDACTED-DEAD-2026-05-15"
             },
             {}
           ]
@@ -42,7 +42,7 @@
       "typeVersion": 4.4,
       "position": [
         -160,
-        -48
+        48
       ],
       "id": "a79d9c25-2da3-42c1-be99-0cefcbcc5811",
       "name": "Scrape Tables",
@@ -79,20 +79,20 @@
       "typeVersion": 2.3,
       "position": [
         64,
-        -48
+        48
       ],
       "id": "54b75c0e-fbb3-4825-b0ae-66ebfbfda75d",
       "name": "Scrape Success?"
     },
     {
       "parameters": {
-        "jsCode": "// Split multi-table response\nconst scrapeData = $input.first().json.data;\n\nreturn scrapeData.classes.map(cls => ({\n  json: {\n    date: scrapeData.date,\n    time: scrapeData.time,\n    slug: cls.slug,\n    assignments: cls.assignments,\n    class_metadata: cls.metadata,\n    scrape_metadata: scrapeData.metadata,\n    scrape_timestamp: scrapeData.scrape_timestamp,\n    put_url: `https://api.github.com/repos/{{DATA_REPO}}/contents/snapshots/${scrapeData.date}/${scrapeData.time}/${cls.slug}/assignments.json`,\n    put_body: {\n      message: `snapshot ${scrapeData.date}/${scrapeData.time}: ${cls.slug}`,\n      content: Buffer.from(JSON.stringify(cls.assignments, null, 2) + '\\n').toString('base64'),\n      branch: 'main',\n    },\n  }\n}));"
+        "jsCode": "// Split multi-table response\nconst scrapeData = $input.first().json.data;\n\nreturn scrapeData.classes.map(cls => ({\n  json: {\n    date: scrapeData.date,\n    time: scrapeData.time,\n    slug: cls.slug,\n    assignments: cls.assignments,\n    class_metadata: cls.metadata,\n    scrape_metadata: scrapeData.metadata,\n    scrape_timestamp: scrapeData.scrape_timestamp,\n    put_url: `https://api.github.com/repos/dlasley/table-mutation-data/contents/snapshots/${scrapeData.date}/${scrapeData.time}/${cls.slug}/assignments.json`,\n    put_body: {\n      message: `snapshot ${scrapeData.date}/${scrapeData.time}: ${cls.slug}`,\n      content: Buffer.from(JSON.stringify(cls.assignments, null, 2) + '\\n').toString('base64'),\n      branch: 'main',\n    },\n  }\n}));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         288,
-        -192
+        -72
       ],
       "id": "2b2f7987-e18f-48e0-a17d-90198525cd65",
       "name": "Split multi-table JSON response"
@@ -112,7 +112,7 @@
       "typeVersion": 4.4,
       "position": [
         736,
-        -96
+        -24
       ],
       "id": "c5e873f2-96f3-4e71-9095-021f011a31d6",
       "name": "PUT Table",
@@ -141,7 +141,7 @@
       "typeVersion": 4.4,
       "position": [
         960,
-        -288
+        -216
       ],
       "id": "1d199c04-0e4a-417c-88d2-952d8cbb7b67",
       "name": "PUT Snapshot Metadata",
@@ -157,21 +157,21 @@
     },
     {
       "parameters": {
-        "jsCode": "// Construct snapshot metadata JSON \nconst scrapeData = $('Scrape Tables').first().json.data;\n\nconst metadata = {\n  date: scrapeData.date,\n  time: scrapeData.time,\n  scrape_timestamp: scrapeData.scrape_timestamp,\n  classes: {},\n};\n\nfor (const cls of scrapeData.classes) {\n  metadata.classes[cls.slug] = cls.metadata;\n}\n\nreturn [{\n  json: {\n    put_url: `https://api.github.com/repos/{{DATA_REPO}}/contents/snapshots/${scrapeData.date}/${scrapeData.time}/metadata.json`,\n    put_body: {\n      message: `snapshot ${scrapeData.date}/${scrapeData.time}: metadata`,\n      content: Buffer.from(JSON.stringify(metadata, null, 2) + '\\n').toString('base64'),\n    },\n  }\n}];"
+        "jsCode": "// Construct snapshot metadata JSON \nconst scrapeData = $('Scrape Tables').first().json.data;\n\nconst metadata = {\n  date: scrapeData.date,\n  time: scrapeData.time,\n  scrape_timestamp: scrapeData.scrape_timestamp,\n  classes: {},\n};\n\nfor (const cls of scrapeData.classes) {\n  metadata.classes[cls.slug] = cls.metadata;\n}\n\nreturn [{\n  json: {\n    put_url: `https://api.github.com/repos/dlasley/table-mutation-data/contents/snapshots/${scrapeData.date}/${scrapeData.time}/metadata.json`,\n    put_body: {\n      message: `snapshot ${scrapeData.date}/${scrapeData.time}: metadata`,\n      content: Buffer.from(JSON.stringify(metadata, null, 2) + '\\n').toString('base64'),\n    },\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         736,
-        -288
+        -216
       ],
       "id": "3b1e6ce5-6fa1-4480-8b54-b8c599994bdc",
       "name": "Build Snapshot Metadata"
     },
     {
       "parameters": {
-        "fromEmail": "{{NOTIFICATION_EMAIL}}",
-        "toEmail": "{{NOTIFICATION_EMAIL}}",
+        "fromEmail": "dlasley@gmail.com",
+        "toEmail": "dlasley@gmail.com",
         "subject": "={{ $json.subject }}",
         "emailFormat": "text",
         "text": "={{ $json.message }}",
@@ -180,8 +180,8 @@
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        528,
-        160
+        2160,
+        320
       ],
       "id": "3298afcf-78e0-491b-b77a-875666d3cd3e",
       "name": "Send an Email",
@@ -201,7 +201,7 @@
       "typeVersion": 3,
       "position": [
         512,
-        -192
+        -72
       ],
       "id": "20d83b75-19e7-4ad1-b756-532ae51d7b2c",
       "name": "Process Tables"
@@ -213,22 +213,104 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        288,
-        0
+        832,
+        320
       ],
       "id": "18266b0c-c9a3-472a-b5bc-a2212ccff5b6",
       "name": "Scrape Error Formatting"
     },
     {
       "parameters": {
+        "jsCode": "const response = $('Append Index').first().json;\n\nreturn [{\n  json: {\n    subject: `SIS Rolling Index Rebuild Failed - ${new Date().toLocaleDateString()}`,\n    message: `Failed to rebuild rolling index.\\n\\nStatus: ${response.status || 'Unknown'}\\n\\nError: ${response.error || 'Unknown'}\\n\\nTraceback:\\n${response.traceback || 'Not available'}`,\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        -224
+      ],
+      "id": "161321ee-4a85-41c7-bfad-7ac933ab3ef6",
+      "name": "Rebuild Index Error Formatting"
+    },
+    {
+      "parameters": {
         "method": "POST",
-        "url": "{{SCRAPER_URL}}/rebuild-index",
+        "url": "https://7gepqpxnpf.us-east-1.awsapprunner.com/append-index",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "X-Webhook-Secret",
-              "value": "{{WEBHOOK_SECRET}}"
+              "value": "REDACTED-DEAD-2026-05-15"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "body": "={{ JSON.stringify({ date: $('Scrape Tables').first().json.data.date, time: $('Scrape Tables').first().json.data.time }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1184,
+        -216
+      ],
+      "id": "16c2d9a8-8647-4d46-bdbc-3bb720f21052",
+      "name": "Append Index",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "aa3149e6-dc3c-47e6-b07e-d549e67472b7",
+              "leftValue": "={{ $json.error.httpCode }}",
+              "rightValue": 409,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1408,
+        -216
+      ],
+      "id": "c7b60196-9489-454f-a1b9-351804ee5f4d",
+      "name": "Is 409 Rebuild Signal?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://7gepqpxnpf.us-east-1.awsapprunner.com/rebuild-index",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Webhook-Secret",
+              "value": "REDACTED-DEAD-2026-05-15"
             }
           ]
         },
@@ -239,27 +321,12 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        1168,
-        -288
+        1648,
+        -64
       ],
-      "id": "16c2d9a8-8647-4d46-bdbc-3bb720f21052",
-      "name": "Rebuild Index",
-      "retryOnFail": true,
-      "maxTries": 2,
+      "id": "f7975a3b-8028-4b5b-a2d4-8ab496ed84e7",
+      "name": "Rebuild Index Fallback",
       "onError": "continueErrorOutput"
-    },
-    {
-      "parameters": {
-        "jsCode": "const response = $('Rebuild Index').first().json;\n\nreturn [{\n  json: {\n    subject: `SIS Rolling Index Rebuild Failed - ${new Date().toLocaleDateString()}`,\n    message: `Failed to rebuild rolling index.\\n\\nStatus: ${response.status || 'Unknown'}\\n\\nError: ${response.error || 'Unknown'}\\n\\nTraceback:\\n${response.traceback || 'Not available'}`,\n  }\n}];\n"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1040,
-        160
-      ],
-      "id": "161321ee-4a85-41c7-bfad-7ac933ab3ef6",
-      "name": "Rebuild Index Error Formatting"
     }
   ],
   "pinData": {},
@@ -330,7 +397,7 @@
       "main": [
         [
           {
-            "node": "Rebuild Index",
+            "node": "Append Index",
             "type": "main",
             "index": 0
           }
@@ -377,9 +444,38 @@
         ]
       ]
     },
-    "Rebuild Index": {
+    "Rebuild Index Error Formatting": {
+      "main": [
+        [
+          {
+            "node": "Send an Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append Index": {
       "main": [
         [],
+        [
+          {
+            "node": "Is 409 Rebuild Signal?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is 409 Rebuild Signal?": {
+      "main": [
+        [
+          {
+            "node": "Rebuild Index Fallback",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "Rebuild Index Error Formatting",
@@ -389,11 +485,12 @@
         ]
       ]
     },
-    "Rebuild Index Error Formatting": {
+    "Rebuild Index Fallback": {
       "main": [
+        [],
         [
           {
-            "node": "Send an Email",
+            "node": "Rebuild Index Error Formatting",
             "type": "main",
             "index": 0
           }
@@ -405,7 +502,7 @@
   "settings": {
     "availableInMCP": false
   },
-  "versionId": "aec4f009-ab92-42bc-9ab4-550cb587a001",
+  "versionId": "a56b76a3-6d8f-4a42-b0a1-305b37678f8c",
   "meta": {
     "instanceId": "499d18731464cb58b4bf2976cfd7b46fad669522ac8bcf94a66640594f38a94d"
   },

@@ -27,3 +27,7 @@ frontend/.next/
 .claude/
 CLAUDE.md
 PROGRESS.md
+.claude/settings.local.json
+CLAUDE.local.md
+.claude/data/
+.claude/logs/

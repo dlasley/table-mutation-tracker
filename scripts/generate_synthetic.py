@@ -19,11 +19,12 @@ from pathlib import Path
 
 
 def log(msg: str) -> None:
-    log(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
+    print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}", flush=True)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from src.config import load_config
 from src.lib.github_store import GitHubStore
 
 SEED = 42
@@ -36,7 +37,12 @@ GRADE_SCALE = [
     (87, "B+"),
     (83, "B"),
     (80, "B-"),
-    (78, "C+"),
+    (77, "C+"),
+    (73, "C"),
+    (70, "C-"),
+    (67, "D+"),
+    (63, "D"),
+    (60, "D-"),
 ]
 
 
@@ -44,7 +50,7 @@ def percent_to_grade(pct: float) -> str:
     for threshold, letter in GRADE_SCALE:
         if pct >= threshold:
             return letter
-    return "C+"
+    return "F"
 
 
 def score_raw(earned: float, possible: float) -> str:
@@ -53,8 +59,28 @@ def score_raw(earned: float, possible: float) -> str:
     return f"{e}/{p}"
 
 
+# Per-class grade distribution. Means tuned so the weighted GPA
+# (AP +1.0, Honors +0.5, PE override = B) lands near A- (~3.7).
+# Sigma gives D-to-100% variance; gaussian samples are clamped to [60, 100].
+GRADE_DISTRIBUTION = {
+    "geometry":                  {"mean": 86, "sigma": 11},
+    "ap_world_history":          {"mean": 84, "sigma": 11},
+    "physical_education":        {"mean": 95, "sigma": 4},
+    "english_10_honors":         {"mean": 87, "sigma": 11},
+    "ap_environmental_science":  {"mean": 88, "sigma": 11},
+    "french_i":                  {"mean": 85, "sigma": 11},
+}
+
+
+def sample_grade(slug: str, rng: random.Random) -> float:
+    """Sample a percent grade for a class, clamped to [60, 100]."""
+    cfg = GRADE_DISTRIBUTION.get(slug, {"mean": 85, "sigma": 9})
+    raw = rng.gauss(cfg["mean"], cfg["sigma"])
+    return max(60.0, min(100.0, raw))
+
+
 def make_assignment(
-    name: str, due_date: str, category: str, points_possible: float,
+    slug: str, name: str, due_date: str, category: str, points_possible: float,
     rng: random.Random, graded: bool = True,
 ) -> dict:
     a = {
@@ -74,7 +100,7 @@ def make_assignment(
         "has_comments": False,
     }
     if graded:
-        pct = rng.uniform(78, 97)
+        pct = sample_grade(slug, rng)
         pe = round(pct / 100 * points_possible, 1)
         a["points_earned"] = pe
         a["percent"] = round(pe / points_possible * 100, 2)
@@ -291,15 +317,14 @@ NEW_ASSIGNMENT_POOL = {
 # Snapshot generation
 # ---------------------------------------------------------------------------
 
-def build_base_state(rng: random.Random) -> dict[str, list[dict]]:
+def build_base_state(rng: random.Random, reference_date: str) -> dict[str, list[dict]]:
     """Create the initial assignment state for all classes."""
-    ref = REFERENCE_DATE.isoformat()
     state = {}
     for slug, defs in BASE_ASSIGNMENTS.items():
         assignments = []
         for name, category, pp in defs:
             graded = (slug, name) not in START_UNGRADED
-            a = make_assignment(name, ref, category, pp, rng, graded=graded)
+            a = make_assignment(slug, name, reference_date, category, pp, rng, graded=graded)
             assignments.append(a)
         state[slug] = assignments
     return state
@@ -327,7 +352,7 @@ def mutate_snapshot(
         grade_chance = 0.25 if is_afternoon else 0.45
         if ungraded and rng.random() < grade_chance:
             a = rng.choice(ungraded)
-            pct = rng.uniform(78, 97)
+            pct = sample_grade(slug, rng)
             pe = round(pct / 100 * a["points_possible"], 1)
             a["points_earned"] = pe
             a["percent"] = round(pe / a["points_possible"] * 100, 2)
@@ -340,7 +365,7 @@ def mutate_snapshot(
             name, category, pp = pool[cursor]
             # ~60% chance new assignment arrives already graded
             graded = rng.random() < 0.6
-            new_a = make_assignment(name, snapshot_date, category, pp, rng, graded=graded)
+            new_a = make_assignment(slug, name, snapshot_date, category, pp, rng, graded=graded)
             assignments.insert(0, new_a)
             pool_cursors[slug] = cursor + 1
 
@@ -350,10 +375,10 @@ def mutate_snapshot(
         mod_chance = 0.10 if is_afternoon else 0.22
         if graded_list and rng.random() < mod_chance:
             a = rng.choice(graded_list)
-            # Shift grade by -5 to +8 percentage points
+            # Shift grade by -10 to +10 percentage points, clamped to [60, 100]
             old_pct = a["percent"]
-            delta = rng.uniform(-5, 8)
-            new_pct = max(78, min(97, old_pct + delta))
+            delta = rng.uniform(-10, 10)
+            new_pct = max(60, min(100, old_pct + delta))
             pe = round(new_pct / 100 * a["points_possible"], 1)
             a["points_earned"] = pe
             a["percent"] = round(pe / a["points_possible"] * 100, 2)
@@ -482,14 +507,38 @@ async def _delete_file(store: GitHubStore, path: str, sha: str) -> None:
 
 def main():
     parser = argparse.ArgumentParser(description="Generate synthetic snapshot data")
-    parser.add_argument("--days", type=int, required=True,
-                        help="Number of days to generate (1-30)")
+    parser.add_argument("--days", type=int,
+                        help="Number of days to generate, walking backward from today (1-60)")
+    parser.add_argument("--start-date", type=str,
+                        help="Start date YYYY-MM-DD (use with --end-date)")
+    parser.add_argument("--end-date", type=str,
+                        help="End date YYYY-MM-DD (use with --start-date)")
     parser.add_argument("--clean", action="store_true",
                         help="Delete all existing synthetic data before generating")
     args = parser.parse_args()
 
-    if not 1 <= args.days <= 30:
-        log("ERROR: --days must be between 1 and 30")
+    # Resolve date range
+    if args.start_date and args.end_date:
+        start = date.fromisoformat(args.start_date)
+        end = date.fromisoformat(args.end_date)
+        if start > end:
+            log("ERROR: --start-date must be on or before --end-date")
+            sys.exit(1)
+        num_days = (end - start).days + 1
+        if not 1 <= num_days <= 60:
+            log(f"ERROR: date range yields {num_days} days; must be 1-60")
+            sys.exit(1)
+        dates = [(start + timedelta(days=i)).isoformat() for i in range(num_days)]
+    elif args.days:
+        if not 1 <= args.days <= 60:
+            log("ERROR: --days must be between 1 and 60")
+            sys.exit(1)
+        dates = [
+            (REFERENCE_DATE - timedelta(days=args.days - 1 - i)).isoformat()
+            for i in range(args.days)
+        ]
+    else:
+        log("ERROR: provide --days OR both --start-date and --end-date")
         sys.exit(1)
 
     rng = random.Random(SEED)
@@ -498,14 +547,8 @@ def main():
     if args.clean:
         asyncio.run(clean_synthetic(store))
 
-    # Generate dates from (days-1) ago through reference date
-    dates = [
-        (REFERENCE_DATE - timedelta(days=args.days - 1 - i)).isoformat()
-        for i in range(args.days)
-    ]
-
-    # Build base state
-    state = build_base_state(rng)
+    # Build base state anchored at the first date
+    state = build_base_state(rng, dates[0])
     pool_cursors = {slug: 0 for slug in CLASS_META}
 
     prev_snapshot = None
@@ -531,7 +574,13 @@ def main():
 
     # Rebuild rolling index
     log("Rebuilding rolling index...")
-    index = asyncio.run(store.rebuild_rolling_index())
+    cfg = load_config()
+    class_weights = {
+        cls.slug: {"weight": cls.gpa_weight, "override_grade": cls.gpa_override_grade}
+        for source in cfg.sources.values()
+        for cls in source.classes
+    }
+    index = asyncio.run(store.rebuild_rolling_index(class_weights=class_weights))
     log(f"  Indexed {len(index['snapshots'])} snapshots")
 
     log(f"\nDone: {total_snapshots} snapshots across {args.days} days pushed to GitHub")

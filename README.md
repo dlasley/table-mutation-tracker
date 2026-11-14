@@ -33,9 +33,11 @@ The system is decomposed into four isolated runtime boundaries deployed across n
 │  -POST /scrape:        │ │  -Code and data        │ │  -n8n routes to    │
 │   stateless worker,    │ │   repos separated      │ │   channels based   │
 │   returns JSON         │ │  -Git history =        │ │   on change type   │
-│  -POST /rebuild-index: │ │   full audit log       │ │                    │
-│   diffs snapshots,     │ │                        │ │                    │
-│   writes rolling index │ │                        │ │                    │
+│  -POST /append-index:  │ │   full audit log       │ │                    │
+│   diffs newest pair,   │ │                        │ │                    │
+│   updates rolling index│ │                        │ │                    │
+│  -POST /rebuild-index: │ │                        │ │                    │
+│   full re-diff fallback│ │                        │ │                    │
 └────────────────────────┘ └────────┬───────────────┘ └────────────────────┘
                                     │
                         GitHub API  │ (read-only)
@@ -73,14 +75,18 @@ This is a deliberate separation. The scraper's job is to collect. n8n's job is t
 
 ![n8n Daily Scrape Pipeline](n8n/Control%20Plane%20Workflow.png)
 
-**Workflow**: Schedule Trigger &rarr; POST /scrape to scraper &rarr; success/failure branch &rarr; split class snapshots &rarr; commit each to GitHub &rarr; update snapshot metadata &rarr; POST /rebuild-index (server-side diff + index write) &rarr; notify on error (scrape failure or index rebuild failure)
+**Workflow**: Schedule Trigger &rarr; POST /scrape to scraper &rarr; success/failure branch &rarr; split class snapshots &rarr; commit each to GitHub &rarr; update snapshot metadata &rarr; POST /append-index (diff against the previous snapshot, append to the index) &rarr; on HTTP 409, POST /rebuild-index as a fallback &rarr; notify on error (scrape failure or index update failure)
 
 ### Collection + Index: Containerized Scraper
 
 A Python + Playwright service behind FastAPI with two endpoints:
 
 - **POST /scrape**: Stateless scraper. Logs into the SIS portal, extracts assignment tables, returns normalized JSON. Knows nothing about storage or delivery.
-- **POST /rebuild-index**: Reads all snapshots from the data repo, diffs consecutive pairs, and writes a rolling index with accurate change counts. Called by n8n after each scrape, or manually for backfills.
+- **POST /append-index**: Diffs one new snapshot against the last entry in the rolling index and appends the result. Called by n8n after each scrape. Re-appending the same snapshot replaces its entry rather than duplicating it. If the snapshot is older than the newest index entry, it returns HTTP 409 so n8n can fall back to a full rebuild.
+- **POST /rebuild-index**: Reads every snapshot in the data repo, diffs consecutive pairs, and rewrites the whole rolling index. Used as the 409 fallback and for backfills. Its cost grows with the number of snapshots, so for large histories run `scripts/rebuild_index.py` locally instead, which avoids the container runtime's request timeout.
+- **GET /health**: Returns 500 and lists any missing required environment variables.
+
+All POST endpoints require an `X-Webhook-Secret` header.
 
 The scraper implements a `TableSource` abstraction so additional SIS platforms can be added without changing the orchestration layer.
 
@@ -114,8 +120,10 @@ index/
 
 A Next.js app on Vercel reads snapshots from the data repo via GitHub API. Change detection happens at two levels:
 
-- **Rolling index** (pre-computed): After each scrape, n8n calls the scraper's `/rebuild-index` endpoint, which diffs all consecutive snapshot pairs, writes change counts, and computes a weighted GPA to the rolling index. The calendar view reads these counts to color-code days without fetching individual snapshots.
+- **Rolling index** (pre-computed): After each scrape, n8n calls the scraper's `/append-index` endpoint, which diffs the new snapshot against the previous one and appends its change counts and a weighted GPA to the rolling index. The calendar view reads these counts to color-code days without fetching individual snapshots.
 - **Detail view** (client-side): When a user clicks a day, the frontend fetches both snapshots and diffs them field-by-field, classifying changes as added, deleted, or modified.
+
+Both layers compare the same fields: category, score, percent, grade, comment presence, and each status flag (late, missing, exempt, and so on) individually. The Python and TypeScript diff implementations are kept in agreement by a test that fails if their field lists diverge.
 
 This keeps the frontend fully decoupled from both the scraper and n8n. It reads from storage and nothing else.
 
@@ -129,7 +137,7 @@ n8n handles all outbound communication. Error notifications are active today: em
 table-mutation-tracker/
 ├── src/
 │   ├── main.py              # Scrape orchestration (called by webhook)
-│   ├── webhook.py           # FastAPI endpoints: /scrape, /rebuild-index, /health
+│   ├── webhook.py           # FastAPI endpoints: /scrape, /append-index, /rebuild-index, /health
 │   ├── config.py            # Config loader (sources.json + env vars)
 │   ├── lib/
 │   │   ├── snapshot_store.py  # SnapshotStore ABC + diff logic
@@ -157,6 +165,8 @@ table-mutation-tracker/
 ├── scripts/
 │   ├── generate_synthetic.py  # Test data generator (--days N --clean, pushes to data repo)
 │   └── rebuild_index.py       # CLI to rebuild rolling index from existing snapshots
+├── tests/                   # pytest: rolling index updates, diff logic, Python/TS parity
+├── n8n/                     # Exported orchestrator workflow (credentials referenced, not inlined)
 ├── Dockerfile               # Playwright + Chromium containerized scraper
 ├── docker-compose.yml       # Caddy + n8n deployment (GCE)
 └── Caddyfile                # Reverse proxy + auto-TLS for n8n
@@ -171,8 +181,8 @@ table-mutation-tracker/
 | `SIS_USERNAME`   | SIS portal credentials |
 | `SIS_PASSWORD`   | SIS portal credentials |
 | `WEBHOOK_SECRET` | Shared secret for n8n request verification |
-| `GITHUB_TOKEN`   | Fine-grained PAT with read/write access to data repo (used by `/rebuild-index`) |
-| `DATA_REPO`      | GitHub data repo (`owner/repo` format, used by `/rebuild-index`) |
+| `GITHUB_TOKEN`   | Fine-grained PAT with read/write access to data repo (used by `/append-index` and `/rebuild-index`) |
+| `DATA_REPO`      | GitHub data repo (`owner/repo` format, used by `/append-index` and `/rebuild-index`) |
 
 ### Vercel (Frontend)
 
@@ -224,6 +234,16 @@ cp .env.example .env
 docker compose up -d
 ```
 
+### Tests
+
+```bash
+python -m venv .venv
+.venv/bin/pip install -r requirements.txt -r requirements-dev.txt
+.venv/bin/python -m pytest
+```
+
+Tests run against an in-memory snapshot store and never contact GitHub or the SIS.
+
 ### Frontend
 
 Deployed via Vercel with auto-deploy from this repo. Set `GITHUB_TOKEN`, `DATA_REPO`, and `DATA_PREFIX` in Vercel environment settings.
@@ -235,14 +255,14 @@ A LiveKit-powered voice agent ("Sally Schoolwork") is embedded as a floating wid
 The agent backend lives in a separate repo ([sally-schoolwork](https://github.com/dlasley/sally-schoolwork)). This repo provides the frontend widget and RPC navigation handler. See [LIVEKIT_AGENT.md](LIVEKIT_AGENT.md) for integration details and [PROGRESS_LIVEKIT.md](PROGRESS_LIVEKIT.md) for current status.
 
 **Frontend components:**
-- `AgentWidget.tsx` — floating widget with video/audio rendering, persona selector, connect/disconnect
-- `NavigationHandler` — registers `navigateTo` RPC method, calls `router.push()` on agent request
-- `/api/livekit-token` — server-side JWT generation with `RoomAgentDispatch`
-- `/help` — capabilities page the agent navigates to after onboarding
+- `AgentWidget.tsx`: floating widget with video/audio rendering, persona selector, connect/disconnect
+- `NavigationHandler`: registers `navigateTo` RPC method, calls `router.push()` on agent request
+- `/api/livekit-token`: server-side JWT generation with `RoomAgentDispatch`
+- `/help`: capabilities page the agent navigates to after onboarding
 
 **Environment variables** (add to `frontend/.env.local`):
-- `NEXT_PUBLIC_LIVEKIT_URL` — LiveKit Cloud WebSocket URL
-- `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` — server-side token generation
+- `NEXT_PUBLIC_LIVEKIT_URL`: LiveKit Cloud WebSocket URL
+- `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`: server-side token generation
 
 ## License
 

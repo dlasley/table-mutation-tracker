@@ -285,6 +285,10 @@ def _compute_gpa(
     return round(total / count, 2) if count else None
 
 
+# Must match DIFF_FIELDS in frontend/lib/diff.ts (enforced by tests/test_diff_assignments.py).
+DIFF_FIELDS = ("category", "score_raw", "percent", "grade", "has_comments")
+
+
 def _diff_assignments(
     slug: str, current: list[dict], previous: list[dict]
 ) -> list[dict]:
@@ -323,7 +327,7 @@ def _diff_assignments(
         prev_a = prev_by_key[key]
 
         field_changes = []
-        for field_name in ("score_raw", "percent", "grade", "category"):
+        for field_name in DIFF_FIELDS:
             if cur_a.get(field_name) != prev_a.get(field_name):
                 field_changes.append({
                     "field": field_name,
@@ -331,15 +335,16 @@ def _diff_assignments(
                     "new": cur_a.get(field_name),
                 })
 
-        # Check flags changes
-        cur_flags = cur_a.get("flags", {})
-        prev_flags = prev_a.get("flags", {})
-        if cur_flags != prev_flags:
-            field_changes.append({
-                "field": "flags",
-                "old": prev_flags,
-                "new": cur_flags,
-            })
+        # Each flag is reported as its own field so the change renders as a scalar.
+        cur_flags = cur_a.get("flags") or {}
+        prev_flags = prev_a.get("flags") or {}
+        for flag in sorted(cur_flags.keys() | prev_flags.keys()):
+            if cur_flags.get(flag) != prev_flags.get(flag):
+                field_changes.append({
+                    "field": flag,
+                    "old": prev_flags.get(flag),
+                    "new": cur_flags.get(flag),
+                })
 
         if field_changes:
             changes.append({

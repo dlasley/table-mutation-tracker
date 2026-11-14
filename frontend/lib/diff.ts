@@ -1,5 +1,6 @@
 import type { Assignment, AssignmentChange, FieldChange } from "./types";
 
+// Must match DIFF_FIELDS in src/lib/snapshot_store.py (enforced by tests/test_diff_assignments.py).
 const DIFF_FIELDS = [
   "category",
   "score_raw",
@@ -60,6 +61,18 @@ export function diffAssignments(
       const newVal = curr[field];
       if (oldVal !== newVal) {
         fieldChanges.push({ field, old: oldVal ?? null, new: newVal ?? null });
+      }
+    }
+
+    // Each flag is reported as its own field so the change renders as a scalar.
+    const prevFlags = prev.flags ?? {};
+    const currFlags = curr.flags ?? {};
+    const flagNames = [...new Set([...Object.keys(prevFlags), ...Object.keys(currFlags)])].sort();
+    for (const flag of flagNames) {
+      const oldVal = prevFlags[flag];
+      const newVal = currFlags[flag];
+      if (oldVal !== newVal) {
+        fieldChanges.push({ field: flag, old: oldVal ?? null, new: newVal ?? null });
       }
     }
 

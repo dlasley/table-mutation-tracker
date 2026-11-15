@@ -4,7 +4,11 @@ description: "Notable changes to the tracker, newest first."
 icon: "clock-rotate-left"
 ---
 
-<Update label="2026-11-14" description="Consistent change detection" tags={["Diffing", "Docs"]}>
+<Update label="2026-11-14" description="Consistent change detection" tags={["Diffing", "Pipeline", "Docs"]}>
+  ## n8n settings moved to environment variables
+
+  The n8n workflow reads the scraper URL, data repository, and alert email address from the `SCRAPER_BASE_URL`, `DATA_REPO`, and `ALERT_EMAIL` environment variables on the n8n host. Set them before importing the updated workflow. See [Environment variables](/guides/n8n-workflow#environment-variables).
+
   ## Flags and comments diffed the same way everywhere
 
   The calendar counts and the day view now compare the same fields. Status flags such as late and missing appear as individual rows in the day view, and comment changes count toward the calendar. A test fails if the two implementations drift apart again.

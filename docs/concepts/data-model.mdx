@@ -58,7 +58,7 @@ An array with one object per assignment row in the class's portal table.
   Assignment name as shown in the portal. Together with `due_date`, it identifies the assignment across snapshots.
 </ResponseField>
 <ResponseField name="due_date" type="string" required>
-  ISO date, `YYYY-MM-DD`.
+  ISO date, `YYYY-MM-DD`. If the portal shows a date that is not in `MM/DD/YYYY` form, the original text is kept as is, and an empty date becomes an empty string.
 </ResponseField>
 <ResponseField name="category" type="string">
   Grading category, such as homework or tests.
@@ -67,7 +67,7 @@ An array with one object per assignment row in the class's portal table.
   Score text exactly as displayed, for example `47.7/60`. Kept alongside the parsed numbers so nothing is lost in normalization.
 </ResponseField>
 <ResponseField name="points_earned" type="number | null">
-  Parsed from `score_raw`. Null when the assignment is not yet scored.
+  Parsed from `score_raw`. Null when the assignment is not yet scored (`--/60`) or when `score_raw` is not in `earned/possible` form.
 </ResponseField>
 <ResponseField name="points_possible" type="number | null">
   Parsed from `score_raw`.

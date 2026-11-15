@@ -92,6 +92,6 @@ Both failure branches format a message and route it to **Send an Email**:
     The node still references a credential ID that was deleted. Switch **Authentication** to None and back, then select the current credential.
   </Accordion>
   <Accordion title="Set HTTP Request timeouts above the platform's">
-    A full scrape, with its deliberate delays between pages, can take more than a minute, so **Scrape Tables** and **Rebuild Index Fallback** use a 300-second timeout. The container platform's own load balancer timeout can be shorter than n8n's; see [Troubleshooting](/operations/troubleshooting).
+    A full scrape, with its deliberate delays between pages, can take more than a minute, so **Scrape Tables** and **Rebuild Index Fallback** use a 300-second timeout. **Append Index** does constant work per snapshot and uses 30 seconds. The container platform's own load balancer timeout can be shorter than n8n's; see [Troubleshooting](/operations/troubleshooting).
   </Accordion>
 </AccordionGroup>

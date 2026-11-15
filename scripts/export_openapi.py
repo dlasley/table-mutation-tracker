@@ -4,7 +4,7 @@
 Usage:
     python scripts/export_openapi.py
 
-tests/test_openapi_export.py fails when docs/openapi.json is out of date.
+tests/test_webhook.py::test_docs_openapi_json_is_current fails when docs/openapi.json is out of date.
 """
 
 import json

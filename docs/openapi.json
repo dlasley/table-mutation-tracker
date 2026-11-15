@@ -1,0 +1,246 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Table Mutation Tracker scraper API",
+    "description": "Called by the n8n orchestrator. Not intended for direct public use.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/scrape": {
+      "post": {
+        "tags": [
+          "Scraping"
+        ],
+        "summary": "Run a scrape",
+        "description": "Log in to the SIS portal, scrape every configured class, and return the\nnormalized snapshot as JSON.\n\nWrites nothing. n8n commits the returned data to the data repo. Scrape\nfailures return HTTP 200 with `status: \"error\"` so n8n can branch on the body.",
+        "operationId": "scrape_scrape_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid `X-Webhook-Secret` header."
+          },
+          "500": {
+            "description": "`WEBHOOK_SECRET`, `GITHUB_TOKEN`, or `DATA_REPO` is not configured."
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/append-index": {
+      "post": {
+        "tags": [
+          "Rolling index"
+        ],
+        "summary": "Append a snapshot to the rolling index",
+        "description": "Diff one snapshot against the previous index entry and append the result\nto `rolling_index.json`.\n\nCalled by n8n after each scrape. Re-appending a snapshot already in the index\nreplaces its entry in place.",
+        "operationId": "append_index_append_index_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppendIndexBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid `X-Webhook-Secret` header."
+          },
+          "500": {
+            "description": "`WEBHOOK_SECRET`, `GITHUB_TOKEN`, or `DATA_REPO` is not configured."
+          },
+          "409": {
+            "description": "The snapshot is older than the newest index entry. The body is `{\"detail\": {\"status\": \"needs-rebuild\", \"reason\": ...}}`; call `/rebuild-index`."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/rebuild-index": {
+      "post": {
+        "tags": [
+          "Rolling index"
+        ],
+        "summary": "Rebuild the rolling index",
+        "description": "Diff every consecutive pair of snapshots in the data repo and rewrite\n`rolling_index.json` from scratch.\n\nn8n calls this when `/append-index` returns 409. Run time grows with the\nnumber of snapshots; for large backfills use `scripts/rebuild_index.py`.",
+        "operationId": "rebuild_index_rebuild_index_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid `X-Webhook-Secret` header."
+          },
+          "500": {
+            "description": "`WEBHOOK_SECRET`, `GITHUB_TOKEN`, or `DATA_REPO` is not configured."
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "summary": "Health check",
+        "description": "Return `{\"status\": \"ok\"}` when every required environment variable is set.\nDoes not contact the SIS or GitHub.",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "500": {
+            "description": "One or more required environment variables are missing."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AppendIndexBody": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "title": "Date",
+            "description": "Snapshot date, `YYYY-MM-DD`.",
+            "examples": [
+              "2026-06-05"
+            ]
+          },
+          "time": {
+            "type": "string",
+            "title": "Time",
+            "description": "Snapshot time, `HHMMSS`.",
+            "examples": [
+              "153000"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "time"
+        ],
+        "title": "AppendIndexBody"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "APIKeyHeader": {
+        "type": "apiKey",
+        "description": "Shared secret configured as `WEBHOOK_SECRET` on the scraper and as a Header Auth credential in n8n.",
+        "in": "header",
+        "name": "X-Webhook-Secret"
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "https://scraper.example.com",
+      "description": "Your scraper deployment"
+    }
+  ]
+}

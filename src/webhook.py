@@ -1,11 +1,12 @@
-"""HTTP endpoint for n8n to trigger scrape runs on Cloud Run."""
+"""HTTP API that n8n calls to run scrapes and maintain the rolling index."""
 
 import hmac
 import os
 import traceback
 
-from fastapi import FastAPI, Header, HTTPException
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException, Security
+from fastapi.security import APIKeyHeader
+from pydantic import BaseModel, Field
 
 from src.config import load_config
 from src.lib.github_store import GitHubStore
@@ -14,10 +15,30 @@ from src.main import run_scrape
 
 
 class AppendIndexBody(BaseModel):
-    date: str
-    time: str
+    date: str = Field(description="Snapshot date, `YYYY-MM-DD`.", examples=["2026-06-05"])
+    time: str = Field(description="Snapshot time, `HHMMSS`.", examples=["153000"])
 
-app = FastAPI(title="SIS Assignment Tracker", docs_url=None, redoc_url=None)
+
+app = FastAPI(
+    title="Table Mutation Tracker scraper API",
+    version="1.0.0",
+    description="Called by the n8n orchestrator. Not intended for direct public use.",
+    docs_url=None,
+    redoc_url=None,
+)
+
+# auto_error=False so a missing header reaches _verify_secret and returns 401, not FastAPI's 403.
+_webhook_secret = APIKeyHeader(
+    name="X-Webhook-Secret",
+    auto_error=False,
+    description="Shared secret configured as `WEBHOOK_SECRET` on the scraper and as a "
+    "Header Auth credential in n8n.",
+)
+
+_AUTH_RESPONSES = {
+    401: {"description": "Missing or invalid `X-Webhook-Secret` header."},
+    500: {"description": "`WEBHOOK_SECRET`, `GITHUB_TOKEN`, or `DATA_REPO` is not configured."},
+}
 
 _REQUIRED_ENV_VARS = [
     "WEBHOOK_SECRET",
@@ -43,13 +64,33 @@ def _verify_secret(webhook_secret: str | None) -> None:
         raise HTTPException(status_code=401, detail="Invalid webhook secret")
 
 
-@app.post("/scrape")
-async def scrape(x_webhook_secret: str | None = Header(default=None)):
-    """Run a full scrape and return structured results.
+def _class_weights() -> dict[str, dict]:
+    cfg = load_config()
+    return {
+        cls.slug: {"weight": cls.gpa_weight, "override_grade": cls.gpa_override_grade}
+        for source in cfg.sources.values()
+        for cls in source.classes
+    }
 
-    Auth: Cloud Run IAM gates network access, X-Webhook-Secret header
-    provides app-level verification. n8n sends both: IAM identity token
-    in Authorization header, webhook secret in X-Webhook-Secret.
+
+def _github_store() -> GitHubStore:
+    token = os.environ.get("GITHUB_TOKEN")
+    repo = os.environ.get("DATA_REPO")
+    if not token or not repo:
+        raise HTTPException(
+            status_code=500,
+            detail="GITHUB_TOKEN and DATA_REPO must be configured",
+        )
+    return GitHubStore(repo=repo, token=token)
+
+
+@app.post("/scrape", summary="Run a scrape", tags=["Scraping"], responses=_AUTH_RESPONSES)
+async def scrape(x_webhook_secret: str | None = Security(_webhook_secret)):
+    """Log in to the SIS portal, scrape every configured class, and return the
+    normalized snapshot as JSON.
+
+    Writes nothing. n8n commits the returned data to the data repo. Scrape
+    failures return HTTP 200 with `status: "error"` so n8n can branch on the body.
     """
     _verify_secret(x_webhook_secret)
 
@@ -67,75 +108,32 @@ async def scrape(x_webhook_secret: str | None = Header(default=None)):
         }
 
 
-@app.post("/rebuild-index")
-async def rebuild_index(x_webhook_secret: str | None = Header(default=None)):
-    """Rebuild the rolling index by diffing all existing snapshots.
-
-    Scans every snapshot in the data repo, diffs consecutive pairs,
-    and writes updated change counts to rolling_index.json.
-    Called by n8n after each scrape to backfill accurate diff data.
-    """
-    _verify_secret(x_webhook_secret)
-
-    token = os.environ.get("GITHUB_TOKEN")
-    repo = os.environ.get("DATA_REPO")
-    if not token or not repo:
-        raise HTTPException(
-            status_code=500,
-            detail="GITHUB_TOKEN and DATA_REPO must be configured",
-        )
-
-    try:
-        cfg = load_config()
-        class_weights = {
-            cls.slug: {"weight": cls.gpa_weight, "override_grade": cls.gpa_override_grade}
-            for source in cfg.sources.values()
-            for cls in source.classes
-        }
-        store = GitHubStore(repo=repo, token=token)
-        index = await store.rebuild_rolling_index(class_weights=class_weights)
-        total_changes = sum(s["changes"]["total"] for s in index["snapshots"])
-        return {
-            "status": "success",
-            "snapshots": len(index["snapshots"]),
-            "total_changes": total_changes,
-        }
-    except Exception as e:
-        return {
-            "status": "error",
-            "error": str(e),
-            "traceback": traceback.format_exc(),
-        }
-
-
-@app.post("/append-index")
+@app.post(
+    "/append-index",
+    summary="Append a snapshot to the rolling index",
+    tags=["Rolling index"],
+    responses={
+        **_AUTH_RESPONSES,
+        409: {
+            "description": "The snapshot is older than the newest index entry. "
+            "The body is `{\"detail\": {\"status\": \"needs-rebuild\", \"reason\": ...}}`; "
+            "call `/rebuild-index`."
+        },
+    },
+)
 async def append_index(
     body: AppendIndexBody,
-    x_webhook_secret: str | None = Header(default=None),
+    x_webhook_secret: str | None = Security(_webhook_secret),
 ):
-    """Append (or replace) one snapshot in the rolling index.
+    """Diff one snapshot against the previous index entry and append the result
+    to `rolling_index.json`.
 
-    O(1) replacement for /rebuild-index in the daily n8n pipeline.
-    Returns 409 with status="needs-rebuild" if the snapshot is out of
-    order; n8n should then call /rebuild-index to fix the drift.
+    Called by n8n after each scrape. Re-appending a snapshot already in the index
+    replaces its entry in place.
     """
     _verify_secret(x_webhook_secret)
-
-    token = os.environ.get("GITHUB_TOKEN")
-    repo = os.environ.get("DATA_REPO")
-    if not token or not repo:
-        raise HTTPException(
-            status_code=500,
-            detail="GITHUB_TOKEN and DATA_REPO must be configured",
-        )
-
-    cfg = load_config()
-    class_weights = {
-        cls.slug: {"weight": cls.gpa_weight, "override_grade": cls.gpa_override_grade}
-        for source in cfg.sources.values()
-        for cls in source.classes
-    }
-    store = GitHubStore(repo=repo, token=token)
+    store = _github_store()
+    class_weights = _class_weights()
 
     try:
         index = await store.append_to_rolling_index(
@@ -164,9 +162,47 @@ async def append_index(
     }
 
 
-@app.get("/health")
+@app.post(
+    "/rebuild-index",
+    summary="Rebuild the rolling index",
+    tags=["Rolling index"],
+    responses=_AUTH_RESPONSES,
+)
+async def rebuild_index(x_webhook_secret: str | None = Security(_webhook_secret)):
+    """Diff every consecutive pair of snapshots in the data repo and rewrite
+    `rolling_index.json` from scratch.
+
+    n8n calls this when `/append-index` returns 409. Run time grows with the
+    number of snapshots; for large backfills use `scripts/rebuild_index.py`.
+    """
+    _verify_secret(x_webhook_secret)
+    store = _github_store()
+
+    try:
+        index = await store.rebuild_rolling_index(class_weights=_class_weights())
+        total_changes = sum(s["changes"]["total"] for s in index["snapshots"])
+        return {
+            "status": "success",
+            "snapshots": len(index["snapshots"]),
+            "total_changes": total_changes,
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e),
+            "traceback": traceback.format_exc(),
+        }
+
+
+@app.get(
+    "/health",
+    summary="Health check",
+    tags=["Operations"],
+    responses={500: {"description": "One or more required environment variables are missing."}},
+)
 async def health():
-    """Health check. Returns 500 if any required env vars are missing."""
+    """Return `{"status": "ok"}` when every required environment variable is set.
+    Does not contact the SIS or GitHub."""
     missing = _check_env()
     if missing:
         raise HTTPException(

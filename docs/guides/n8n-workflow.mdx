@@ -66,7 +66,7 @@ flowchart TB
 Both failure branches format a message and route it to **Send an Email**:
 
 - **Scrape Error Formatting** covers login failures, portal changes, and anything else that stops the scrape.
-- **Rebuild Index Error Formatting** covers append failures other than 409 and a failed rebuild.
+- **Rebuild Index Error Formatting** covers HTTP-level failures from **Append Index** other than 409, such as a timeout or a 401, and HTTP-level failures from **Rebuild Index Fallback**.
 
 The scrape failure email shows the scraper's error message and an error ID. The scraper logs the full stack trace under that ID, so search its logs for the ID to find the trace. See [Find the stack trace for an error](/operations/troubleshooting#find-the-stack-trace-for-an-error).
 

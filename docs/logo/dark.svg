@@ -1,0 +1,9 @@
+<svg width="260" height="32" viewBox="0 0 260 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="1" y="3" width="26" height="26" rx="5" stroke="#07C983" stroke-width="2"/>
+  <path d="M1 11H27" stroke="#07C983" stroke-width="2"/>
+  <rect x="6" y="15" width="5" height="4" rx="1" fill="#07C983"/>
+  <rect x="17" y="15" width="5" height="4" rx="1" fill="#FB923C"/>
+  <rect x="6" y="22" width="5" height="4" rx="1" fill="#FACC15"/>
+  <rect x="17" y="22" width="5" height="4" rx="1" fill="#07C983"/>
+  <text x="36" y="22" font-family="Inter, system-ui, sans-serif" font-size="16" font-weight="600" fill="#FAFAFA">Table Mutation Tracker</text>
+</svg>

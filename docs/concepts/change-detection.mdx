@@ -1,0 +1,77 @@
+---
+title: "Change detection"
+description: "How two snapshots are compared, what counts as a change, and why the calendar and day view always agree."
+icon: "code-compare"
+---
+
+Every change in the UI comes from comparing a snapshot with the one before it. Nothing is hand-entered, and no changelog files are stored. If the comparison logic improves, past days can be recomputed from the original snapshots.
+
+## Matching assignments
+
+An assignment is identified by its **name and due date**. For each class, the two snapshots' assignments are matched on that pair:
+
+| In previous snapshot | In current snapshot | Result |
+| --- | --- | --- |
+| No | Yes | **Added** |
+| Yes | No | **Deleted** |
+| Yes | Yes, with field differences | **Modified** |
+| Yes | Yes, identical | No change |
+
+<Warning>
+  Because name and due date form the identity, renaming an assignment or moving its due date appears as one deletion plus one addition, not as a modification. The deleted-assignments page will list the old version. This is expected behavior and worth knowing before raising a "deleted assignment" with a teacher.
+</Warning>
+
+## Fields compared
+
+For matched assignments, these fields are compared:
+
+- `category`
+- `score_raw`
+- `percent`
+- `grade`
+- `has_comments`
+- each status flag on its own: `collected`, `late`, `missing`, `exempt`, `absent`, `incomplete`, `excluded`
+
+A flag change is reported as a single field, so the day view shows a readable row such as:
+
+```text
+missing: false → true
+```
+
+An assignment counts once as modified no matter how many of its fields changed.
+
+## Class-level changes
+
+Separately from assignments, each snapshot records:
+
+- classes that appeared or disappeared
+- classes whose `final_grade` changed
+
+These are counted in `class_level` in the rolling index and kept out of the assignment totals.
+
+## Two layers, one definition
+
+Change detection runs in two places for performance reasons:
+
+<Steps>
+  <Step title="Rolling index (Python, after each scrape)">
+    The scraper's `/append-index` endpoint diffs the new snapshot against the previous one and stores the counts. The calendar colors each day from these counts without fetching any snapshots.
+  </Step>
+  <Step title="Day view (TypeScript, on demand)">
+    When you open a day, the browser fetches that snapshot and the previous one and diffs them field by field to produce the detail rows.
+  </Step>
+</Steps>
+
+The two implementations must agree, or a day could be colored as changed with no detail rows to explain it. A test in the repository reads the field list from the TypeScript diff and fails if it differs from the Python one.
+
+## Calendar colors
+
+Each day takes the color of its most significant change:
+
+| Color | Meaning |
+| --- | --- |
+| Red | At least one assignment deleted |
+| Orange | At least one assignment modified, none deleted |
+| Yellow | Assignments added only |
+| Green | Scraped, no changes |
+| Gray | No snapshot that day |

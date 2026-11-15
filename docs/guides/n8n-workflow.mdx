@@ -1,0 +1,97 @@
+---
+title: "n8n workflow"
+description: "The daily scrape pipeline node by node, with its success path, fallback, and error handling."
+icon: "sitemap"
+---
+
+n8n is the control plane. The scraper returns data and stops; n8n decides where that data goes, what to do when a step fails, and who hears about it. The exported workflow is in the repository at `n8n/table-mutation-data-orchestrator.json`.
+
+<Frame caption="The daily pipeline in the n8n editor">
+  <img src="/images/n8n-workflow.png" alt="n8n editor canvas showing the daily scrape workflow: Schedule Trigger, Scrape Tables, a success check, a loop committing each class, metadata commit, Append Index with a 409 fallback to Rebuild Index, and email notification on errors" />
+</Frame>
+
+The diagram below shows the same flow with each branch labeled.
+
+```mermaid
+flowchart TB
+    T([Schedule Trigger]) --> S[Scrape Tables]
+    S --> OK{Scrape Success?}
+    OK -- yes --> SP[Split multi-table<br/>JSON response]
+    OK -- no --> SE[Scrape Error<br/>Formatting]
+    SP --> PT[[Process Tables]]
+    PT -- each class --> PUT[PUT Table]
+    PUT --> PT
+    PT -- done --> BM[Build Snapshot<br/>Metadata]
+    BM --> PM[PUT Snapshot<br/>Metadata]
+    PM --> AI[Append Index]
+    AI -- error --> R{Is 409 Rebuild<br/>Signal?}
+    R -- yes --> RF[Rebuild Index<br/>Fallback]
+    R -- no --> RE[Rebuild Index<br/>Error Formatting]
+    RF -- error --> RE
+    SE --> M[/Send an Email/]
+    RE --> M
+```
+
+## The success path
+
+<Steps>
+  <Step title="Schedule Trigger">
+    Fires once a day at 16:00 in the instance's configured time zone.
+  </Step>
+  <Step title="Scrape Tables">
+    HTTP Request to `POST /scrape`. The `X-Webhook-Secret` header comes from an n8n Header Auth credential, so the secret never appears in the exported workflow.
+  </Step>
+  <Step title="Scrape Success?">
+    The scraper returns HTTP 200 even when the scrape fails, with `status: "error"` in the body. This IF node branches on that field, which keeps failures visible as data rather than as opaque HTTP errors.
+  </Step>
+  <Step title="Split multi-table JSON response and Process Tables">
+    A Code node turns the response into one item per class. A Loop Over Items node sends them one at a time to **PUT Table**, which commits `assignments.json` through the GitHub Contents API.
+  </Step>
+  <Step title="Build Snapshot Metadata and PUT Snapshot Metadata">
+    After the last class, a Code node assembles `metadata.json` from the scrape response and commits it.
+  </Step>
+  <Step title="Append Index">
+    HTTP Request to `POST /append-index` with the snapshot's `date` and `time`. The scraper diffs it against the previous snapshot and appends the entry to the rolling index.
+  </Step>
+</Steps>
+
+## The fallback path
+
+`/append-index` refuses a snapshot older than the newest index entry and returns HTTP 409. That happens if a run is replayed out of order or the index has drifted.
+
+**Is 409 Rebuild Signal?** checks the error's status code. On a 409, **Rebuild Index Fallback** calls `POST /rebuild-index`, which recomputes the whole index from every snapshot. Any other error goes straight to notification.
+
+## Error handling
+
+Both failure branches format a message and route it to **Send an Email**:
+
+- **Scrape Error Formatting** covers login failures, portal changes, and anything else that stops the scrape.
+- **Rebuild Index Error Formatting** covers append failures other than 409 and a failed rebuild.
+
+## Credentials
+
+| Credential | Type | Used by |
+| --- | --- | --- |
+| Scraper webhook secret | Header Auth | Scrape Tables, Append Index, Rebuild Index Fallback |
+| GitHub token with write access to the data repo | Header Auth | PUT Table, PUT Snapshot Metadata |
+| Email | SMTP | Send an Email |
+
+## n8n behaviors worth knowing
+
+<AccordionGroup>
+  <Accordion title="Use JSON body mode for requests to the scraper">
+    An HTTP Request node in **Raw** body mode with a `JSON.stringify(...)` expression double-encodes the body, and FastAPI rejects it with a 422. Set **Body Content Type** to JSON and **Specify Body** to JSON instead.
+  </Accordion>
+  <Accordion title="$json changes after every HTTP Request node">
+    Downstream of an HTTP Request node, `$json` is that node's response, not the original input. Reference earlier data explicitly, for example `$('Scrape Tables').first().json.data`.
+  </Accordion>
+  <Accordion title="Import always creates a new workflow">
+    The Import option in the editor never updates an existing workflow. To change one in place, use the REST API: `PUT /api/v1/workflows/{id}` with an `X-N8N-API-KEY` header.
+  </Accordion>
+  <Accordion title="A credential dropdown shows 'No credentials yet'">
+    The node still references a credential ID that was deleted. Switch **Authentication** to None and back, then select the current credential.
+  </Accordion>
+  <Accordion title="Set HTTP Request timeouts above the platform's">
+    A full scrape, with its deliberate delays between pages, can take more than a minute, so **Scrape Tables** and **Rebuild Index Fallback** use a 300-second timeout. The container platform's own load balancer timeout can be shorter than n8n's; see [Troubleshooting](/operations/troubleshooting).
+  </Accordion>
+</AccordionGroup>

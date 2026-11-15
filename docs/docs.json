@@ -1,0 +1,82 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Table Mutation Tracker",
+  "description": "Detect retroactive grade and assignment changes in a student information system, with n8n orchestration and a calendar diff UI.",
+  "colors": {
+    "primary": "#16A34A",
+    "light": "#07C983",
+    "dark": "#15803D"
+  },
+  "favicon": "/favicon.svg",
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Guides",
+        "groups": [
+          {
+            "group": "Get started",
+            "pages": ["index", "concepts/how-it-works"]
+          },
+          {
+            "group": "Concepts",
+            "pages": ["concepts/data-model", "concepts/change-detection"]
+          },
+          {
+            "group": "Orchestration",
+            "pages": ["guides/n8n-workflow"]
+          },
+          {
+            "group": "Operations",
+            "pages": ["operations/runbook", "operations/troubleshooting"]
+          },
+          {
+            "group": "Project",
+            "pages": ["changelog"]
+          }
+        ]
+      },
+      {
+        "tab": "API reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": ["api-reference/overview"]
+          },
+          {
+            "group": "Endpoints",
+            "openapi": "openapi.json"
+          }
+        ]
+      }
+    ]
+  },
+  "api": {
+    "playground": {
+      "display": "none"
+    },
+    "examples": {
+      "languages": ["curl", "python", "javascript"]
+    }
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "GitHub",
+        "href": "https://github.com/dlasley/table-mutation-tracker"
+      }
+    ]
+  },
+  "contextual": {
+    "options": ["copy", "view", "chatgpt", "claude", "perplexity", "mcp", "cursor", "vscode"]
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/dlasley/table-mutation-tracker"
+    }
+  }
+}

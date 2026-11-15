@@ -1,0 +1,59 @@
+---
+title: "API overview"
+description: "Authentication, response conventions, and how n8n uses the scraper endpoints."
+icon: "book-open"
+---
+
+The scraper exposes a small HTTP API for the n8n orchestrator. It is not a public API: there is no published host, and the interactive playground is turned off for that reason. The endpoint pages in this section are generated from the FastAPI app's OpenAPI spec.
+
+| Endpoint | Called by | Purpose |
+| --- | --- | --- |
+| `POST /scrape` | Daily workflow | Scrape the portal and return normalized JSON |
+| `POST /append-index` | Daily workflow, after commits | Add one snapshot to the rolling index |
+| `POST /rebuild-index` | Workflow fallback on 409 | Recompute the rolling index from every snapshot |
+| `GET /health` | Monitoring, deploys | Confirm required configuration is present |
+
+## Authentication
+
+Every `POST` endpoint requires a shared secret in the `X-Webhook-Secret` header. The scraper compares it in constant time against its `WEBHOOK_SECRET` environment variable. A missing or wrong value returns 401.
+
+```bash
+curl -X POST https://scraper.example.com/append-index \
+  -H "X-Webhook-Secret: $WEBHOOK_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"date": "2026-06-05", "time": "153000"}'
+```
+
+`/health` needs no secret and reveals only which variable names are missing.
+
+## Response conventions
+
+`/scrape` and `/rebuild-index` report their own failures in the response body with HTTP 200, so n8n can branch on the result without treating it as a transport error.
+
+<ResponseExample>
+```json Success
+{
+  "status": "success",
+  "snapshots": 85,
+  "total_changes": 268
+}
+```
+
+```json Error
+{
+  "status": "error",
+  "error": "Authentication failed: Auth cookie not found after login. Credentials may be invalid. Current URL: https://sis.example.com/...",
+  "traceback": "Traceback (most recent call last): ..."
+}
+```
+</ResponseExample>
+
+`/append-index` uses HTTP status codes for the one condition the workflow acts on:
+
+| Status | Meaning |
+| --- | --- |
+| 200 | Entry appended or replaced. The body includes the new `entry`. |
+| 401 | Missing or invalid secret. |
+| 409 | Snapshot is older than the newest index entry. The body's `detail.status` is `needs-rebuild`. |
+| 422 | Request body is not valid JSON with `date` and `time`. |
+| 500 | Scraper is missing `GITHUB_TOKEN` or `DATA_REPO`. |

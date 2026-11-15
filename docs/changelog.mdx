@@ -1,0 +1,45 @@
+---
+title: "Changelog"
+description: "Notable changes to the tracker, newest first."
+icon: "clock-rotate-left"
+---
+
+<Update label="2026-11-14" description="Consistent change detection" tags={["Diffing", "Docs"]}>
+  ## Flags and comments diffed the same way everywhere
+
+  The calendar counts and the day view now compare the same fields. Status flags such as late and missing appear as individual rows in the day view, and comment changes count toward the calendar. A test fails if the two implementations drift apart again.
+
+  ## Documentation site
+
+  These docs, including an API reference generated from the scraper's OpenAPI spec.
+</Update>
+
+<Update label="2026-06-07" description="Better test data" tags={["Tooling"]}>
+  The synthetic data generator gained GPA weights, explicit date ranges, and the full letter-grade scale.
+</Update>
+
+<Update label="2026-05-15" description="Incremental index updates" tags={["Pipeline", "API"]}>
+  ## /append-index
+
+  Each scrape now adds one entry to the rolling index instead of recomputing all of it. A full rebuild had grown past the container platform's 120-second request limit. When a snapshot arrives out of order, the endpoint returns 409 and n8n falls back to a full rebuild.
+
+  ## Credential handling in n8n
+
+  The webhook secret moved into a shared n8n credential, so it no longer appears in the exported workflow.
+</Update>
+
+<Update label="2026-04-15" description="GPA" tags={["Frontend"]}>
+  The rolling index records a weighted GPA for each snapshot, shown on the calendar page.
+</Update>
+
+<Update label="2026-04-04" description="Voice agent" tags={["Frontend"]}>
+  A LiveKit voice and text agent can answer questions about grades and changes and navigate the site on request.
+</Update>
+
+<Update label="2026-03-28" description="Server-side index" tags={["Pipeline"]}>
+  Five n8n nodes that computed diffs and wrote the index were replaced by one call to the scraper's `/rebuild-index` endpoint.
+</Update>
+
+<Update label="2026-03-25" description="Deleted assignments" tags={["Frontend"]}>
+  A page listing every assignment that disappeared from the portal, with when it was first seen and when it was removed.
+</Update>

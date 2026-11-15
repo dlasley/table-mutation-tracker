@@ -1,0 +1,61 @@
+---
+title: "Troubleshooting"
+description: "Symptoms seen in this system, what causes them, and how to fix them."
+icon: "life-ring"
+---
+
+<AccordionGroup>
+  <Accordion title="Rebuild Index returns 504 Gateway Timeout" icon="hourglass">
+    **Cause:** `/rebuild-index` reads every snapshot, so its run time grows all year. App Runner's load balancer ends any request after 120 seconds, regardless of the timeout set in n8n.
+
+    **Fix:** The daily pipeline uses `/append-index`, which does constant work per snapshot. For a full rebuild, run `scripts/rebuild_index.py` locally; see the [runbook](/operations/runbook#rebuild-the-rolling-index).
+  </Accordion>
+
+  <Accordion title="Append Index returns 422 Unprocessable Entity" icon="brackets-curly">
+    **Cause:** The n8n HTTP Request node sends the body in **Raw** mode with a `JSON.stringify(...)` expression. n8n encodes it a second time, so FastAPI receives a JSON string instead of an object.
+
+    **Fix:** Switch the node to JSON body mode. See [n8n behaviors worth knowing](/guides/n8n-workflow#n8n-behaviors-worth-knowing).
+  </Accordion>
+
+  <Accordion title="Append Index returns 409 with needs-rebuild" icon="arrow-rotate-left">
+    **Cause:** The snapshot is older than the newest entry in the index, for example after replaying an old execution.
+
+    **Fix:** None needed in normal operation. The workflow calls `/rebuild-index` automatically. If the rebuild then times out, rebuild locally.
+  </Accordion>
+
+  <Accordion title="A day is colored as changed but shows no detail rows" icon="calendar-xmark">
+    **Cause:** The rolling index was built by different comparison logic than the day view uses. This happens when the diff logic changes and older index entries were never recomputed.
+
+    **Fix:** Rebuild the index. The test suite fails if the Python and TypeScript field lists drift apart, so the two should never disagree on new data.
+  </Accordion>
+
+  <Accordion title="An assignment shows as deleted and a similar one as added" icon="clone">
+    **Cause:** Assignments are matched by name and due date. A rename or a moved due date breaks the match.
+
+    **Fix:** Nothing to fix. Compare the two rows in the day view; if only the name or date differs, the teacher edited the assignment rather than removing it. See [Change detection](/concepts/change-detection#matching-assignments).
+  </Accordion>
+
+  <Accordion title="Scraper calls return 401" icon="lock">
+    **Cause:** The `X-Webhook-Secret` header is missing or does not match `WEBHOOK_SECRET` on the scraper.
+
+    **Fix:** Confirm the n8n Header Auth credential and the App Runner variable hold the same value. If a node's credential dropdown reads "No credentials yet", it points at a deleted credential; reselect it.
+  </Accordion>
+
+  <Accordion title="/health returns 500" icon="heart-pulse">
+    **Cause:** A required environment variable is missing on the scraper. The response lists which ones.
+
+    **Fix:** Set the variables in the App Runner service configuration. Required: `WEBHOOK_SECRET`, `SIS_USERNAME`, `SIS_PASSWORD`, `GITHUB_TOKEN`, `DATA_REPO`.
+  </Accordion>
+
+  <Accordion title="Scripts fail with HTTP Error 401: Unauthorized" icon="key">
+    **Cause:** The `GITHUB_TOKEN` in the repository's `.env` has expired or been revoked.
+
+    **Fix:** Rotate it, or pass a token for one run: `GITHUB_TOKEN=$(gh auth token) .venv/bin/python scripts/rebuild_index.py`.
+  </Accordion>
+
+  <Accordion title="The scrape fails at login" icon="right-to-bracket">
+    **Cause:** The portal's bot detection can challenge automated logins, and portal layout changes can break selectors.
+
+    **Fix:** Check the n8n error email for the scraper's message. Avoid repeated manual retries, which make challenges more likely. Wait for the next scheduled run before changing selectors.
+  </Accordion>
+</AccordionGroup>

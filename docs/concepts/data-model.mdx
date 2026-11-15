@@ -1,0 +1,192 @@
+---
+title: "Data model"
+description: "The snapshot files n8n commits and the rolling index the scraper maintains."
+icon: "database"
+---
+
+All data lives in a private GitHub repository, separate from the code. A snapshot is addressed by its date and time, and each class inside it by a slug from the scraper's configuration.
+
+```text
+snapshots/
+  2026-06-05/
+    153000/
+      geometry/assignments.json
+      french_i/assignments.json
+      metadata.json
+index/
+  rolling_index.json
+```
+
+- Dates are flat ISO directories (`YYYY-MM-DD`), not nested by year and month.
+- Times are `HHMMSS`, so several scrapes per day sort correctly.
+- Test data uses the same layout under `snapshots/synthetic/` and `index/synthetic/`. The frontend's `DATA_PREFIX` setting chooses which tree it reads.
+
+<Note>
+  Examples on this page use generated test data. Names are invented.
+</Note>
+
+## assignments.json
+
+An array with one object per assignment row in the class's portal table.
+
+```json assignments.json
+[
+  {
+    "due_date": "2026-05-19",
+    "category": "Chapter Tests/Project Based",
+    "name": "Unit 3 Exam",
+    "flags": {
+      "collected": false,
+      "late": false,
+      "missing": false,
+      "exempt": false,
+      "absent": false,
+      "incomplete": false,
+      "excluded": false
+    },
+    "score_raw": "47.7/60",
+    "points_earned": 47.7,
+    "points_possible": 60,
+    "percent": 79.5,
+    "grade": "C+",
+    "has_comments": false
+  }
+]
+```
+
+<ResponseField name="name" type="string" required>
+  Assignment name as shown in the portal. Together with `due_date`, it identifies the assignment across snapshots.
+</ResponseField>
+<ResponseField name="due_date" type="string" required>
+  ISO date, `YYYY-MM-DD`.
+</ResponseField>
+<ResponseField name="category" type="string">
+  Grading category, such as homework or tests.
+</ResponseField>
+<ResponseField name="score_raw" type="string">
+  Score text exactly as displayed, for example `47.7/60`. Kept alongside the parsed numbers so nothing is lost in normalization.
+</ResponseField>
+<ResponseField name="points_earned" type="number | null">
+  Parsed from `score_raw`. Null when the assignment is not yet scored.
+</ResponseField>
+<ResponseField name="points_possible" type="number | null">
+  Parsed from `score_raw`.
+</ResponseField>
+<ResponseField name="percent" type="number | null">
+  Percentage shown by the portal.
+</ResponseField>
+<ResponseField name="grade" type="string | null">
+  Letter grade shown by the portal.
+</ResponseField>
+<ResponseField name="has_comments" type="boolean">
+  True when the teacher has left a comment on the assignment.
+</ResponseField>
+<ResponseField name="flags" type="object">
+  Status markers from the portal. Each is true when its icon appears in the row.
+
+  <Expandable title="flags">
+    <ResponseField name="collected" type="boolean" />
+    <ResponseField name="late" type="boolean" />
+    <ResponseField name="missing" type="boolean" />
+    <ResponseField name="exempt" type="boolean" />
+    <ResponseField name="absent" type="boolean" />
+    <ResponseField name="incomplete" type="boolean" />
+    <ResponseField name="excluded" type="boolean" />
+  </Expandable>
+</ResponseField>
+
+## metadata.json
+
+One per snapshot. Built by n8n from the scrape response and committed after the class files.
+
+```json metadata.json
+{
+  "date": "2026-06-05",
+  "time": "153000",
+  "scrape_timestamp": "2026-06-05T15:30:00-08:00",
+  "classes": {
+    "geometry": {
+      "course": "Geometry",
+      "teacher": "Rivera, Ana",
+      "expression": "1(A)",
+      "term": "S2",
+      "final_grade": "B",
+      "final_percent": 85.4,
+      "assignment_count": 19,
+      "last_updated": "6/5/2026"
+    }
+  }
+}
+```
+
+<ResponseField name="date" type="string" required>Snapshot date, `YYYY-MM-DD`.</ResponseField>
+<ResponseField name="time" type="string" required>Snapshot time, `HHMMSS`.</ResponseField>
+<ResponseField name="scrape_timestamp" type="string">ISO 8601 timestamp of the scrape.</ResponseField>
+<ResponseField name="classes" type="object" required>
+  Keyed by class slug. A class present in one snapshot and absent from the next is reported as a class-level change.
+
+  <Expandable title="class">
+    <ResponseField name="course" type="string">Course name.</ResponseField>
+    <ResponseField name="teacher" type="string">Teacher name as shown in the portal.</ResponseField>
+    <ResponseField name="expression" type="string">Period or schedule expression.</ResponseField>
+    <ResponseField name="term" type="string">Term code.</ResponseField>
+    <ResponseField name="final_grade" type="string | null">Current letter grade for the class.</ResponseField>
+    <ResponseField name="final_percent" type="number | null">Current percentage for the class.</ResponseField>
+    <ResponseField name="assignment_count" type="integer">Number of assignment rows scraped.</ResponseField>
+    <ResponseField name="last_updated" type="string | null">The portal's own last-updated date for the class.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+## rolling_index.json
+
+A single file with one entry per snapshot, oldest first. The calendar reads only this file, so it never has to fetch individual snapshots to color a month.
+
+```json rolling_index.json
+{
+  "snapshots": [
+    {
+      "date": "2026-06-05",
+      "time": "153000",
+      "scrape_timestamp": "2026-06-05T15:30:00-08:00",
+      "previous_snapshot": "2026-06-05/083000",
+      "changes": {
+        "class_level": 0,
+        "added": 1,
+        "modified": 2,
+        "deleted": 0,
+        "total": 3
+      },
+      "classes": {
+        "geometry": {
+          "course": "Geometry",
+          "final_grade": "B",
+          "final_percent": 85.4,
+          "assignment_count": 19
+        }
+      },
+      "gpa": 3.65
+    }
+  ]
+}
+```
+
+<ResponseField name="previous_snapshot" type="string | null">
+  The `date/time` this entry was diffed against. Null for the first snapshot.
+</ResponseField>
+<ResponseField name="changes" type="object">
+  Counts from comparing this snapshot with `previous_snapshot`.
+
+  <Expandable title="changes">
+    <ResponseField name="added" type="integer">Assignments present now and not before.</ResponseField>
+    <ResponseField name="modified" type="integer">Assignments with at least one changed field. One assignment counts once, however many fields changed.</ResponseField>
+    <ResponseField name="deleted" type="integer">Assignments present before and not now.</ResponseField>
+    <ResponseField name="total" type="integer">Sum of added, modified, and deleted.</ResponseField>
+    <ResponseField name="class_level" type="integer">Classes added or removed, plus classes whose final grade changed. Not included in `total`.</ResponseField>
+  </Expandable>
+</ResponseField>
+<ResponseField name="classes" type="object">
+  A summary of each class in the snapshot: course, final grade, final percent, and assignment count.
+</ResponseField>
+<ResponseField name="gpa" type="number | null">
+  Weighted GPA on a 4.0 scale. Honors classes add 0.5 and AP classes add 1.0. Weights come from the scraper's class configuration. Null when no class has a gradeable letter grade.
+</ResponseField>

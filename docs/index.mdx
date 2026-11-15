@@ -1,0 +1,48 @@
+---
+title: "Introduction"
+description: "Catch retroactive grade and assignment changes in a student information system, and see exactly what changed and when."
+icon: "house"
+---
+
+A student information system (SIS) parent portal shows the current state of every class. It does not show history. When a teacher changes a grade from two weeks ago, deletes an assignment, or marks work as missing after the fact, the portal updates silently. Families notice only if they kept their own screenshots or spreadsheets.
+
+Table Mutation Tracker keeps that history for you. It scrapes the portal on a schedule, stores every scrape as an immutable snapshot in a private Git repository, and shows the differences between snapshots on a calendar, in the style of the Internet Archive's Wayback Machine.
+
+## Who it's for
+
+The primary user is a parent following one student across six to eight classes. The same pattern applies to anyone who needs an audit trail for a system that only shows its present state.
+
+## What you get
+
+- **A calendar of changes.** Each day is colored by the most significant change it contains: deletions, then modifications, then additions.
+- **Field-level detail.** Open a day to see each changed assignment, with the old and new score, grade, category, comment status, and status flags such as late or missing.
+- **A deleted-assignments history.** Every assignment that disappeared, with when it was first seen and when it was removed.
+- **Weighted GPA over time**, computed from each snapshot's class grades.
+- **An audit trail you can point to.** Every snapshot is a Git commit with a timestamp.
+
+<Note>
+  Grades in the portal are the source of truth. This project records what the portal showed at each scrape so changes can be discussed with evidence, not memory.
+</Note>
+
+## Explore the docs
+
+<Columns cols={2}>
+  <Card title="How it works" icon="diagram-project" href="/concepts/how-it-works">
+    The five runtime boundaries and what each one is trusted with.
+  </Card>
+  <Card title="Change detection" icon="code-compare" href="/concepts/change-detection">
+    How two snapshots are compared, and what counts as a change.
+  </Card>
+  <Card title="n8n workflow" icon="sitemap" href="/guides/n8n-workflow">
+    The daily pipeline, node by node, including its fallback path.
+  </Card>
+  <Card title="Runbook" icon="screwdriver-wrench" href="/operations/runbook">
+    Deploy, rebuild the index, rotate secrets, and generate test data.
+  </Card>
+  <Card title="Data model" icon="database" href="/concepts/data-model">
+    Snapshot files and the rolling index, field by field.
+  </Card>
+  <Card title="API reference" icon="code" href="/api-reference/overview">
+    The scraper endpoints that n8n calls.
+  </Card>
+</Columns>

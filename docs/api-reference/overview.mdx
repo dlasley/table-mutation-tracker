@@ -28,7 +28,7 @@ curl -X POST https://scraper.example.com/append-index \
 
 ## Response conventions
 
-All three `POST` endpoints report unexpected failures in the response body with HTTP 200 and `"status": "error"`, so n8n can branch on the result without treating it as a transport error. The error body carries the exception message and an `error_id`. The scraper logs the full stack trace to stdout with the same `error_id`, so you can search the logs for it. The response never includes the trace. The one exception is the `/append-index` out-of-order case, which returns 409 (see below).
+All three `POST` endpoints report unexpected failures in the response body with HTTP 200 and `"status": "error"`, so n8n can branch on the result without treating it as a transport error. The error body carries the exception message, with any URLs replaced by `<url>`, and an `error_id`. The scraper logs the full stack trace to stdout with the same `error_id`, so you can search the logs for it. The response never includes the trace. The one exception is the `/append-index` out-of-order case, which returns 409 (see below).
 
 <ResponseExample>
 ```json /scrape success
@@ -49,7 +49,7 @@ All three `POST` endpoints report unexpected failures in the response body with 
 ```json Error
 {
   "status": "error",
-  "error": "Authentication failed: Auth cookie not found after login. Credentials may be invalid. Current URL: https://sis.example.com/...",
+  "error": "Authentication failed: Auth cookie not found after login. Credentials may be invalid. Current path: /login",
   "error_id": "3f9a1c7d0b2e"
 }
 ```

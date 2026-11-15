@@ -4,7 +4,13 @@ description: "Notable changes to the tracker, newest first."
 icon: "clock-rotate-left"
 ---
 
-<Update label="2026-11-14" description="Consistent change detection" tags={["Diffing", "Docs"]}>
+<Update label="2026-11-14" description="Consistent change detection and safer error responses" tags={["Diffing", "API", "Pipeline", "Docs"]}>
+  ## Error IDs instead of tracebacks
+
+  Error responses from the scraper no longer include a stack trace. They return the exception message, with URLs replaced by `<url>`, and an `error_id`. The scraper logs the full trace under the same ID, and the n8n failure emails show it. Re-import the n8n workflow so the emails pick up the new field. See [Find the stack trace for an error](/operations/troubleshooting#find-the-stack-trace-for-an-error).
+
+  `/append-index` now rejects a `date` that is not `YYYY-MM-DD` or a `time` that is not six digits with 422. The scraper checks the webhook secret before it parses the request body, so a bad secret returns 401 even when the body is malformed.
+
   ## Flags and comments diffed the same way everywhere
 
   The calendar counts and the day view now compare the same fields. Status flags such as late and missing appear as individual rows in the day view, and comment changes count toward the calendar. A test fails if the two implementations drift apart again.

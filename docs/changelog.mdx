@@ -7,9 +7,13 @@ icon: "clock-rotate-left"
 <Update label="2026-11-14" description="Consistent change detection and safer error responses" tags={["Diffing", "API", "Pipeline", "Docs"]}>
   ## Error IDs instead of tracebacks
 
-  Error responses from the scraper no longer include a stack trace. They return the exception message, with URLs replaced by `<url>`, and an `error_id`. The scraper logs the full trace under the same ID, and the n8n failure emails show it. Re-import the n8n workflow so the emails pick up the new field. See [Find the stack trace for an error](/operations/troubleshooting#find-the-stack-trace-for-an-error).
+  Error responses from the scraper no longer include a stack trace. They return the exception message, with URLs replaced by `<url>`, and an `error_id`. The scraper logs the full trace under the same ID, and the scrape failure email shows it. Re-import the n8n workflow so the email picks up the new field. See [Find the stack trace for an error](/operations/troubleshooting#find-the-stack-trace-for-an-error).
 
   `/append-index` now rejects a `date` that is not `YYYY-MM-DD` or a `time` that is not six digits with 422. The scraper checks the webhook secret before it parses the request body, so a bad secret returns 401 even when the body is malformed.
+
+  ## n8n settings moved to environment variables
+
+  The n8n workflow reads the scraper URL, data repository, and alert email address from the `SCRAPER_BASE_URL`, `DATA_REPO`, and `ALERT_EMAIL` environment variables on the n8n host. Set them before importing the updated workflow. See [Environment variables](/guides/n8n-workflow#environment-variables).
 
   ## Flags and comments diffed the same way everywhere
 

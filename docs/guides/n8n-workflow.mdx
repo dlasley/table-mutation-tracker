@@ -78,6 +78,26 @@ The scrape failure email shows the scraper's error message and an error ID. The 
 | GitHub token with write access to the data repo | Header Auth | PUT Table, PUT Snapshot Metadata |
 | Email | SMTP | Send an Email |
 
+## Environment variables
+
+The workflow reads deployment-specific values from `$env` on the n8n host, so the exported workflow contains no hosts, addresses, or repository names. Set these variables in the n8n instance's environment before you import or run the workflow:
+
+| Variable | Example | Used by |
+| --- | --- | --- |
+| `SCRAPER_BASE_URL` | `https://<scraper-host>` | Scrape Tables, Append Index, Rebuild Index Fallback. Omit the trailing slash; the nodes append `/scrape`, `/append-index`, and `/rebuild-index`. |
+| `DATA_REPO` | `<owner>/<data-repo>` | Split multi-table JSON response and Build Snapshot Metadata, which build the GitHub Contents API URLs for snapshot commits. |
+| `ALERT_EMAIL` | `alerts@example.com` | Send an Email, as both the sender and the recipient. |
+
+```bash
+SCRAPER_BASE_URL=https://<scraper-host>
+DATA_REPO=<owner>/<data-repo>
+ALERT_EMAIL=alerts@example.com
+```
+
+n8n must allow expressions to read environment variables. If `N8N_BLOCK_ENV_ACCESS_IN_NODE` is `true` on your instance, set it to `false`.
+
+Because these values stay on the n8n host, you can commit an export from the live instance as is. A repository test fails if a committed workflow export or docs page contains a deployment host, a personal email address, or the data repository path.
+
 ## n8n behaviors worth knowing
 
 <AccordionGroup>

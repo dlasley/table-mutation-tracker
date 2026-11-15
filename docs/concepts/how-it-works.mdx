@@ -1,6 +1,6 @@
 ---
 title: "How it works"
-description: "Five runtime boundaries, two repositories, and one orchestrator that owns the data flow."
+description: "The runtime boundaries, two repositories, and one orchestrator that owns the data flow."
 icon: "diagram-project"
 ---
 
@@ -53,7 +53,7 @@ flowchart TB
   <Tab title="Presentation">
     **Frontend**, a Next.js app on Vercel.
 
-    Server components read the rolling index and snapshots from the data repo on each request. The calendar uses pre-computed counts; the day view diffs two snapshots in the browser. Optional HTTP basic auth protects the whole site.
+    Server components read the rolling index and snapshots from the data repo, cached for up to 60 seconds. The calendar uses pre-computed counts; the day view diffs two snapshots in the browser. HTTP basic auth protects the site when `BASIC_AUTH_CREDENTIALS` is set.
   </Tab>
   <Tab title="Voice agent">
     **LiveKit agent**, in a separate repository.
@@ -102,7 +102,7 @@ sequenceDiagram
     The scraper's job is to collect. If it also decided where data goes and who gets notified, every new notification channel or storage target would mean a code change and a redeploy. With n8n as the orchestrator, those become workflow branches, and every execution is logged with its full input and output.
   </Accordion>
   <Accordion title="Why store snapshots in Git?">
-    Each snapshot becomes a timestamped commit that cannot be quietly edited. That is the property the project exists to provide. JSON files in a repository are also enough for one student over a school year; a database can be added later without changing the snapshot format.
+    Each snapshot is written as timestamped commits, so any later change to it shows up in Git history. That is the property the project exists to provide. JSON files in a repository are also enough for one student over a school year; a database can be added later without changing the snapshot format.
   </Accordion>
   <Accordion title="Why pre-compute some diffs and not others?">
     The calendar needs a change count for every day in a month. Fetching and diffing dozens of snapshots per page view would be slow, so those counts live in the rolling index. Detail views need only two snapshots, so they are diffed on demand from the raw files. See [Change detection](/concepts/change-detection).

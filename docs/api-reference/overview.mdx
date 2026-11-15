@@ -28,10 +28,17 @@ curl -X POST https://scraper.example.com/append-index \
 
 ## Response conventions
 
-`/scrape` and `/rebuild-index` report their own failures in the response body with HTTP 200, so n8n can branch on the result without treating it as a transport error.
+All three `POST` endpoints report unexpected failures in the response body with HTTP 200 and `"status": "error"`, so n8n can branch on the result without treating it as a transport error. The one exception is the `/append-index` out-of-order case, which returns 409 (see below).
 
 <ResponseExample>
-```json Success
+```json /scrape success
+{
+  "status": "success",
+  "data": { "...": "normalized classes and assignments" }
+}
+```
+
+```json /rebuild-index success
 {
   "status": "success",
   "snapshots": 85,
@@ -48,11 +55,11 @@ curl -X POST https://scraper.example.com/append-index \
 ```
 </ResponseExample>
 
-`/append-index` uses HTTP status codes for the one condition the workflow acts on:
+`/append-index` also uses HTTP status codes, including 409 for the one condition the workflow acts on:
 
 | Status | Meaning |
 | --- | --- |
-| 200 | Entry appended or replaced. The body includes the new `entry`. |
+| 200 | Entry appended or replaced, and the body includes the new `entry`. Any other failure also returns 200, with `"status": "error"`. |
 | 401 | Missing or invalid secret. |
 | 409 | Snapshot is older than the newest index entry. The body's `detail.status` is `needs-rebuild`. |
 | 422 | Request body is not valid JSON with `date` and `time`. |

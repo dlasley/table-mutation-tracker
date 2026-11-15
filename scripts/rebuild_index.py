@@ -7,6 +7,7 @@ counts. Use this to backfill accurate change data after fixing diff logic.
 Usage:
     python scripts/rebuild_index.py
     python scripts/rebuild_index.py --start-date 2026-03-01 --end-date 2026-03-31
+    python scripts/rebuild_index.py --synthetic
 """
 
 import argparse
@@ -30,6 +31,11 @@ def main():
     parser = argparse.ArgumentParser(description="Rebuild rolling index from existing snapshots")
     parser.add_argument("--start-date", help="Only include snapshots on or after this date (YYYY-MM-DD)")
     parser.add_argument("--end-date", help="Only include snapshots on or before this date (YYYY-MM-DD)")
+    parser.add_argument(
+        "--synthetic",
+        action="store_true",
+        help="Rebuild the synthetic test data index (snapshots/synthetic, index/synthetic)",
+    )
     args = parser.parse_args()
 
     token = os.environ.get("GITHUB_TOKEN")
@@ -45,9 +51,17 @@ def main():
         for cls in source.classes
     }
 
-    store = GitHubStore(repo=repo, token=token)
+    if args.synthetic:
+        store = GitHubStore(
+            repo=repo,
+            token=token,
+            snapshot_prefix="snapshots/synthetic",
+            index_prefix="index/synthetic",
+        )
+    else:
+        store = GitHubStore(repo=repo, token=token)
 
-    print(f"Rebuilding rolling index for {repo}...")
+    print(f"Rebuilding {'synthetic ' if args.synthetic else ''}rolling index for {repo}...")
     index = asyncio.run(store.rebuild_rolling_index(class_weights=class_weights))
 
     # Filter by date range if specified

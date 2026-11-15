@@ -75,7 +75,13 @@ Rebuild after changing the diff logic, or when the index has drifted from the sn
 GITHUB_TOKEN=$(gh auth token) .venv/bin/python scripts/rebuild_index.py
 ```
 
-The script reads every snapshot, diffs consecutive pairs, and overwrites `index/rolling_index.json`. Add `--synthetic` to rebuild the test data index instead. Save a copy of the current index first if you want to compare before and after:
+The script reads every snapshot, diffs consecutive pairs, and overwrites `index/rolling_index.json`. Add `--synthetic` to rebuild the test data index instead.
+
+<Warning>
+  `--start-date` and `--end-date` do not limit the rebuild to a window of an otherwise complete index. They filter the written index, so entries outside the range are removed. Omit both for a normal rebuild.
+</Warning>
+
+Save a copy of the current index first if you want to compare before and after:
 
 ```bash
 gh api repos/<owner>/<data-repo>/contents/index/rolling_index.json \
@@ -99,7 +105,7 @@ The secret lives in two places that must match.
     Edit the Header Auth credential used by **Scrape Tables**, **Append Index**, and **Rebuild Index Fallback**. All three pick up the change because they share the credential.
   </Step>
   <Step title="Verify without scraping">
-    Call `/append-index` with the newest snapshot's date and time. Re-appending an existing snapshot recomputes its index entry in place, so it is safe.
+    Call `/append-index` with the newest snapshot's date and time. Re-appending an existing snapshot recomputes its index entry in place, so it is safe, though it does write a commit to the data repo's index.
 
     ```bash
     curl -X POST https://<scraper-host>/append-index \

@@ -19,7 +19,24 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ScrapeSuccess"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ],
+                  "title": "Response 200 Scrape Scrape Post",
+                  "discriminator": {
+                    "propertyName": "status",
+                    "mapping": {
+                      "success": "#/components/schemas/ScrapeSuccess",
+                      "error": "#/components/schemas/ErrorResponse"
+                    }
+                  }
+                }
               }
             }
           },
@@ -60,7 +77,24 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/AppendIndexSuccess"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ],
+                  "title": "Response 200 Append Index Append Index Post",
+                  "discriminator": {
+                    "propertyName": "status",
+                    "mapping": {
+                      "success": "#/components/schemas/AppendIndexSuccess",
+                      "error": "#/components/schemas/ErrorResponse"
+                    }
+                  }
+                }
               }
             }
           },
@@ -104,7 +138,24 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RebuildIndexSuccess"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ],
+                  "title": "Response 200 Rebuild Index Rebuild Index Post",
+                  "discriminator": {
+                    "propertyName": "status",
+                    "mapping": {
+                      "success": "#/components/schemas/RebuildIndexSuccess",
+                      "error": "#/components/schemas/ErrorResponse"
+                    }
+                  }
+                }
               }
             }
           },
@@ -135,7 +186,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/HealthOk"
+                }
               }
             }
           },
@@ -152,6 +205,7 @@
         "properties": {
           "date": {
             "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
             "title": "Date",
             "description": "Snapshot date, `YYYY-MM-DD`.",
             "examples": [
@@ -160,6 +214,7 @@
           },
           "time": {
             "type": "string",
+            "pattern": "^\\d{6}$",
             "title": "Time",
             "description": "Snapshot time, `HHMMSS`.",
             "examples": [
@@ -174,6 +229,222 @@
         ],
         "title": "AppendIndexBody"
       },
+      "AppendIndexSuccess": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "success",
+            "title": "Status"
+          },
+          "snapshots": {
+            "type": "integer",
+            "title": "Snapshots",
+            "description": "Number of entries in the rolling index."
+          },
+          "entry": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IndexEntry"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The entry for the appended snapshot."
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "snapshots",
+          "entry"
+        ],
+        "title": "AppendIndexSuccess"
+      },
+      "Assignment": {
+        "properties": {
+          "due_date": {
+            "type": "string",
+            "title": "Due Date"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "flags": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "type": "object",
+            "title": "Flags"
+          },
+          "score_raw": {
+            "type": "string",
+            "title": "Score Raw"
+          },
+          "points_earned": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Points Earned"
+          },
+          "points_possible": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Points Possible"
+          },
+          "percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percent"
+          },
+          "grade": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade"
+          },
+          "has_comments": {
+            "type": "boolean",
+            "title": "Has Comments"
+          }
+        },
+        "type": "object",
+        "required": [
+          "due_date",
+          "category",
+          "name",
+          "flags",
+          "score_raw",
+          "points_earned",
+          "points_possible",
+          "percent",
+          "grade",
+          "has_comments"
+        ],
+        "title": "Assignment"
+      },
+      "ClassMetadata": {
+        "properties": {
+          "course": {
+            "type": "string",
+            "title": "Course"
+          },
+          "teacher": {
+            "type": "string",
+            "title": "Teacher"
+          },
+          "expression": {
+            "type": "string",
+            "title": "Expression"
+          },
+          "term": {
+            "type": "string",
+            "title": "Term"
+          },
+          "final_grade": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final Grade"
+          },
+          "final_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final Percent"
+          },
+          "assignment_count": {
+            "type": "integer",
+            "title": "Assignment Count"
+          },
+          "last_updated": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Updated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "course",
+          "teacher",
+          "expression",
+          "term",
+          "final_grade",
+          "final_percent",
+          "assignment_count",
+          "last_updated"
+        ],
+        "title": "ClassMetadata"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "error",
+            "title": "Status"
+          },
+          "error": {
+            "type": "string",
+            "title": "Error",
+            "description": "Exception message with URLs replaced by `<url>`. The full message is in the scraper logs."
+          },
+          "error_id": {
+            "type": "string",
+            "title": "Error Id",
+            "description": "Short id that locates the full stack trace in the scraper logs."
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "error",
+          "error_id"
+        ],
+        "title": "ErrorResponse"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -186,6 +457,313 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "HealthOk": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "ok",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "HealthOk"
+      },
+      "IndexChanges": {
+        "properties": {
+          "class_level": {
+            "type": "integer",
+            "title": "Class Level",
+            "description": "Class-level changes, such as a final grade change."
+          },
+          "added": {
+            "type": "integer",
+            "title": "Added",
+            "description": "Assignments added since the previous snapshot."
+          },
+          "modified": {
+            "type": "integer",
+            "title": "Modified",
+            "description": "Assignments modified since the previous snapshot."
+          },
+          "deleted": {
+            "type": "integer",
+            "title": "Deleted",
+            "description": "Assignments deleted since the previous snapshot."
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Assignment changes: added + modified + deleted."
+          }
+        },
+        "type": "object",
+        "required": [
+          "class_level",
+          "added",
+          "modified",
+          "deleted",
+          "total"
+        ],
+        "title": "IndexChanges"
+      },
+      "IndexClassSummary": {
+        "properties": {
+          "course": {
+            "type": "string",
+            "title": "Course",
+            "description": "Course name."
+          },
+          "final_grade": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final Grade",
+            "description": "Final letter grade, or null when not posted."
+          },
+          "final_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final Percent",
+            "description": "Final percent, or null when not posted."
+          },
+          "assignment_count": {
+            "type": "integer",
+            "title": "Assignment Count",
+            "description": "Number of assignments in the class."
+          }
+        },
+        "type": "object",
+        "required": [
+          "course",
+          "final_grade",
+          "final_percent",
+          "assignment_count"
+        ],
+        "title": "IndexClassSummary"
+      },
+      "IndexEntry": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "title": "Date",
+            "description": "Snapshot date, `YYYY-MM-DD`."
+          },
+          "time": {
+            "type": "string",
+            "title": "Time",
+            "description": "Snapshot time, `HHMMSS`."
+          },
+          "scrape_timestamp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scrape Timestamp",
+            "description": "ISO 8601 timestamp of the scrape."
+          },
+          "previous_snapshot": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Snapshot",
+            "description": "Previous snapshot as `YYYY-MM-DD/HHMMSS`, or null for the first."
+          },
+          "changes": {
+            "$ref": "#/components/schemas/IndexChanges"
+          },
+          "classes": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/IndexClassSummary"
+            },
+            "type": "object",
+            "title": "Classes",
+            "description": "Keyed by class slug."
+          },
+          "gpa": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gpa",
+            "description": "Weighted GPA, or null when it cannot be computed."
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "time",
+          "scrape_timestamp",
+          "previous_snapshot",
+          "changes",
+          "classes",
+          "gpa"
+        ],
+        "title": "IndexEntry"
+      },
+      "RebuildIndexSuccess": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "success",
+            "title": "Status"
+          },
+          "snapshots": {
+            "type": "integer",
+            "title": "Snapshots",
+            "description": "Number of entries in the rolling index."
+          },
+          "total_changes": {
+            "type": "integer",
+            "title": "Total Changes",
+            "description": "Assignment changes summed across all entries."
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "snapshots",
+          "total_changes"
+        ],
+        "title": "RebuildIndexSuccess"
+      },
+      "ScrapeData": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "title": "Date",
+            "description": "Snapshot date, `YYYY-MM-DD`."
+          },
+          "time": {
+            "type": "string",
+            "title": "Time",
+            "description": "Snapshot time, `HHMMSS`."
+          },
+          "scrape_timestamp": {
+            "type": "string",
+            "title": "Scrape Timestamp",
+            "description": "ISO 8601 timestamp of the scrape."
+          },
+          "classes": {
+            "items": {
+              "$ref": "#/components/schemas/ScrapedClass"
+            },
+            "type": "array",
+            "title": "Classes"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/ScrapeMetadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "time",
+          "scrape_timestamp",
+          "classes",
+          "metadata"
+        ],
+        "title": "ScrapeData"
+      },
+      "ScrapeMetadata": {
+        "properties": {
+          "scrape_timestamp": {
+            "type": "string",
+            "title": "Scrape Timestamp",
+            "description": "ISO 8601 timestamp of the scrape."
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "description": "Source key, always `sis`."
+          },
+          "classes": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ClassMetadata"
+            },
+            "type": "object",
+            "title": "Classes",
+            "description": "Class metadata keyed by class slug. Committed as `metadata.json`."
+          }
+        },
+        "type": "object",
+        "required": [
+          "scrape_timestamp",
+          "source",
+          "classes"
+        ],
+        "title": "ScrapeMetadata"
+      },
+      "ScrapeSuccess": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "success",
+            "title": "Status"
+          },
+          "data": {
+            "$ref": "#/components/schemas/ScrapeData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "title": "ScrapeSuccess"
+      },
+      "ScrapedClass": {
+        "properties": {
+          "slug": {
+            "type": "string",
+            "title": "Slug",
+            "description": "Class slug from `config/sources.json`."
+          },
+          "assignments": {
+            "items": {
+              "$ref": "#/components/schemas/Assignment"
+            },
+            "type": "array",
+            "title": "Assignments"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/ClassMetadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slug",
+          "assignments",
+          "metadata"
+        ],
+        "title": "ScrapedClass"
       },
       "ValidationError": {
         "properties": {

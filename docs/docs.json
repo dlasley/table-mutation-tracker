@@ -48,12 +48,26 @@
             "pages": ["api-reference/overview"]
           },
           {
-            "group": "Endpoints",
-            "openapi": "openapi.json"
+            "group": "Scraping",
+            "pages": ["api-reference/scraping/run-a-scrape"]
+          },
+          {
+            "group": "Rolling index",
+            "pages": [
+              "api-reference/rolling-index/append-a-snapshot-to-the-rolling-index",
+              "api-reference/rolling-index/rebuild-the-rolling-index"
+            ]
+          },
+          {
+            "group": "Operations",
+            "pages": ["api-reference/operations/health-check"]
           }
         ]
       }
     ]
+  },
+  "seo": {
+    "indexing": "all"
   },
   "api": {
     "playground": {

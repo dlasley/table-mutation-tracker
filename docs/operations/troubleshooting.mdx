@@ -8,13 +8,13 @@ icon: "life-ring"
   <Accordion title="Rebuild Index returns 504 Gateway Timeout" icon="hourglass">
     **Cause:** `/rebuild-index` reads every snapshot, so its run time grows all year. App Runner's load balancer ends any request after 120 seconds, regardless of the timeout set in n8n.
 
-    **Fix:** The daily pipeline uses `/append-index`, which does constant work per snapshot. For a full rebuild, run `scripts/rebuild_index.py` locally; see the [runbook](/operations/runbook#rebuild-the-rolling-index).
+    **Fix:** The scheduled pipeline uses `/append-index`, which does constant work per snapshot. For a full rebuild, run `scripts/rebuild_index.py` locally; see the [runbook](/operations/runbook#rebuild-the-rolling-index).
   </Accordion>
 
   <Accordion title="Append Index returns 422 Unprocessable Entity" icon="brackets-curly">
-    **Cause:** The n8n HTTP Request node sends the body in **Raw** mode with a `JSON.stringify(...)` expression. n8n encodes it a second time, so FastAPI receives a JSON string instead of an object.
+    **Cause:** Either the n8n HTTP Request node sends the body in **Raw** mode with a `JSON.stringify(...)` expression, which n8n encodes a second time so FastAPI receives a JSON string instead of an object, or the body has a malformed `date` (must be `YYYY-MM-DD`) or `time` (must be six digits, `HHMMSS`).
 
-    **Fix:** Switch the node to JSON body mode. See [n8n behaviors worth knowing](/guides/n8n-workflow#n8n-behaviors-worth-knowing).
+    **Fix:** For the first cause, switch the node to JSON body mode. For the second, correct the value; the response `detail` names the failing field. See [n8n behaviors worth knowing](/guides/n8n-workflow#n8n-behaviors-worth-knowing).
   </Accordion>
 
   <Accordion title="Append Index returns 409 with needs-rebuild" icon="arrow-rotate-left">
@@ -56,6 +56,16 @@ icon: "life-ring"
   <Accordion title="The scrape fails at login" icon="right-to-bracket">
     **Cause:** The portal's bot detection can challenge automated logins, and portal layout changes can break selectors.
 
-    **Fix:** Check the n8n error email for the scraper's message. Avoid repeated manual retries, which make challenges more likely. Wait for the next scheduled run before changing selectors.
+    **Fix:** Check the n8n error email for the scraper's message and error ID. To see the full stack trace, follow [Find the stack trace for an error](#find-the-stack-trace-for-an-error). Avoid repeated manual retries, which make challenges more likely. Wait for the next scheduled run before changing selectors.
   </Accordion>
 </AccordionGroup>
+
+## Find the stack trace for an error
+
+Error responses and the scrape failure email include a short error ID but not the stack trace. The scraper writes the full trace to its logs, tagged with the same ID.
+
+1. Copy the ID from the email. It appears as `Error ID: <id>`.
+2. In the AWS console, open CloudWatch Logs and find the log group for the App Runner service. Its name starts with `/aws/apprunner/` and ends with `/application`.
+3. Search the log group for the ID, widening the time range to cover the failed run.
+
+The matching log entry holds the exception and its traceback.

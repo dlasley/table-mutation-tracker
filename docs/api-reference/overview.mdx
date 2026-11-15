@@ -8,8 +8,8 @@ The scraper exposes a small HTTP API for the n8n orchestrator. It is not a publi
 
 | Endpoint | Called by | Purpose |
 | --- | --- | --- |
-| `POST /scrape` | Daily workflow | Scrape the portal and return normalized JSON |
-| `POST /append-index` | Daily workflow, after commits | Add one snapshot to the rolling index |
+| `POST /scrape` | Scheduled workflow | Scrape the portal and return normalized JSON |
+| `POST /append-index` | Scheduled workflow, after commits | Add one snapshot to the rolling index |
 | `POST /rebuild-index` | Workflow fallback on 409 | Recompute the rolling index from every snapshot |
 | `GET /health` | Monitoring, deploys | Confirm required configuration is present |
 
@@ -28,7 +28,7 @@ curl -X POST https://scraper.example.com/append-index \
 
 ## Response conventions
 
-All three `POST` endpoints report unexpected failures in the response body with HTTP 200 and `"status": "error"`, so n8n can branch on the result without treating it as a transport error. The one exception is the `/append-index` out-of-order case, which returns 409 (see below).
+All three `POST` endpoints report unexpected failures in the response body with HTTP 200 and `"status": "error"`, so n8n can branch on the result without treating it as a transport error. The error body carries the exception message, with any URLs replaced by `<url>`, and an `error_id`. The scraper logs the full stack trace to stdout with the same `error_id`, so you can search the logs for it. The response never includes the trace. The one exception is the `/append-index` out-of-order case, which returns 409 (see below).
 
 <ResponseExample>
 ```json /scrape success
@@ -49,8 +49,8 @@ All three `POST` endpoints report unexpected failures in the response body with 
 ```json Error
 {
   "status": "error",
-  "error": "Authentication failed: Auth cookie not found after login. Credentials may be invalid. Current URL: https://sis.example.com/...",
-  "traceback": "Traceback (most recent call last): ..."
+  "error": "Authentication failed: Auth cookie not found after login. Credentials may be invalid. Current path: /login",
+  "error_id": "3f9a1c7d0b2e"
 }
 ```
 </ResponseExample>
@@ -62,5 +62,5 @@ All three `POST` endpoints report unexpected failures in the response body with 
 | 200 | Entry appended or replaced, and the body includes the new `entry`. Any other failure also returns 200, with `"status": "error"`. |
 | 401 | Missing or invalid secret. |
 | 409 | Snapshot is older than the newest index entry. The body's `detail.status` is `needs-rebuild`. |
-| 422 | Request body is not valid JSON with `date` and `time`. |
+| 422 | Request body is not valid JSON with `date` and `time`, `date` is not `YYYY-MM-DD`, or `time` is not six digits (`HHMMSS`). |
 | 500 | Scraper is missing `GITHUB_TOKEN` or `DATA_REPO`. |

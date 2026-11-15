@@ -3,6 +3,7 @@
 import asyncio
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
+from urllib.parse import urlparse
 
 from playwright.async_api import async_playwright
 from playwright_stealth import Stealth
@@ -89,7 +90,7 @@ async def run_scrape() -> ScrapeResult:
             raise RuntimeError(
                 "Authentication failed: Auth cookie not found after login. "
                 "Credentials may be invalid. "
-                f"Current URL: {page.url}"
+                f"Current path: {urlparse(page.url).path}"
             )
         print(f"  Logged in. URL: {page.url}")
 

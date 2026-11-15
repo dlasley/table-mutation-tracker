@@ -5,6 +5,8 @@ A system that scrapes a Student Information System (SIS) parent portal on a sche
 
 Built to solve a real-world problem: Student Information Systems are inherently ephemeral. Updates made retroactively by a teacher are not surfaced as a time series, leaving parents and students to detect changes through manually timestamped screenshots or spreadsheets. Git history provides the audit trail natively, as every snapshot is an immutable, timestamped commit.
 
+Full documentation, including the API reference, is at https://docs.amazingzebra.com/table-mutation-tracker.
+
 ## Architecture
 
 The system is decomposed into four isolated runtime boundaries deployed across n8n, a container runtime, GitHub, and Vercel. Each has a single responsibility and no access to credentials it does not need.

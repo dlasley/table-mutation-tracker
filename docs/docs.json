@@ -55,9 +55,6 @@
       }
     ]
   },
-  "seo": {
-    "indexing": "all"
-  },
   "api": {
     "playground": {
       "display": "none"

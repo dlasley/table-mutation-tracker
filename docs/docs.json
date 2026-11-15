@@ -42,7 +42,6 @@
       },
       {
         "tab": "API reference",
-        "openapi": "openapi.json",
         "groups": [
           {
             "group": "Overview",
@@ -50,15 +49,18 @@
           },
           {
             "group": "Scraping",
-            "pages": ["POST /scrape"]
+            "pages": ["api-reference/scraping/run-a-scrape"]
           },
           {
             "group": "Rolling index",
-            "pages": ["POST /append-index", "POST /rebuild-index"]
+            "pages": [
+              "api-reference/rolling-index/append-a-snapshot-to-the-rolling-index",
+              "api-reference/rolling-index/rebuild-the-rolling-index"
+            ]
           },
           {
             "group": "Operations",
-            "pages": ["GET /health"]
+            "pages": ["api-reference/operations/health-check"]
           }
         ]
       }

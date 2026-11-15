@@ -212,7 +212,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const response = $('Scrape Tables').first().json;\n\nreturn [{\n  json: {\n    subject: `SIS Scraper Failed - ${new Date().toLocaleDateString()}`,\n    message: `The SIS scrape failed.\\n\\nError: ${response.error || 'Unknown error'}\\n\\nTraceback:\\n${response.traceback || 'No traceback available'}`,\n  }\n}];"
+        "jsCode": "const response = $('Scrape Tables').first().json;\n\nreturn [{\n  json: {\n    subject: `SIS Scraper Failed - ${new Date().toLocaleDateString()}`,\n    message: `The SIS scrape failed.\\n\\nError: ${response.error || 'Unknown error'}\\n\\nError ID: ${response.error_id || 'none'} (search the scraper logs for this ID)`,\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -225,7 +225,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const response = $('Append Index').first().json;\n\nreturn [{\n  json: {\n    subject: `SIS Rolling Index Rebuild Failed - ${new Date().toLocaleDateString()}`,\n    message: `Failed to rebuild rolling index.\\n\\nStatus: ${response.status || 'Unknown'}\\n\\nError: ${response.error || 'Unknown'}\\n\\nTraceback:\\n${response.traceback || 'Not available'}`,\n  }\n}];\n"
+        "jsCode": "const response = $('Append Index').first().json;\n\nreturn [{\n  json: {\n    subject: `SIS Rolling Index Rebuild Failed - ${new Date().toLocaleDateString()}`,\n    message: `Failed to rebuild rolling index.\\n\\nStatus: ${response.status || 'Unknown'}\\n\\nError: ${response.error || 'Unknown'}\\n\\nError ID: ${response.error_id || 'none'} (search the scraper logs for this ID)`,\n  }\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,

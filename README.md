@@ -77,7 +77,7 @@ This is a deliberate separation. The scraper's job is to collect. n8n's job is t
 
 ![n8n Scrape Pipeline](n8n/Control%20Plane%20Workflow.png)
 
-**Workflow**: Schedule Trigger &rarr; POST /scrape to scraper &rarr; success/failure branch &rarr; split class snapshots &rarr; commit each to GitHub &rarr; update snapshot metadata &rarr; POST /append-index (diff against the previous snapshot, append to the index) &rarr; on HTTP 409, POST /rebuild-index as a fallback &rarr; notify on error (scrape failure or index update failure)
+**Workflow**: Schedule Trigger &rarr; POST /scrape to scraper &rarr; success/failure branch &rarr; split class snapshots &rarr; commit each to GitHub &rarr; update snapshot metadata &rarr; POST /append-index (diff against the previous snapshot, append to the index) &rarr; on HTTP 409, POST /rebuild-index as a fallback &rarr; notify on error (scrape failure or index update failure; the scrape failure email includes an error ID that locates the stack trace in the scraper logs)
 
 ### Collection + Index: Containerized Scraper
 

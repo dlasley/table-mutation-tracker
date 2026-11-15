@@ -42,14 +42,23 @@
       },
       {
         "tab": "API reference",
+        "openapi": "openapi.json",
         "groups": [
           {
             "group": "Overview",
             "pages": ["api-reference/overview"]
           },
           {
-            "group": "Endpoints",
-            "openapi": "openapi.json"
+            "group": "Scraping",
+            "pages": ["POST /scrape"]
+          },
+          {
+            "group": "Rolling index",
+            "pages": ["POST /append-index", "POST /rebuild-index"]
+          },
+          {
+            "group": "Operations",
+            "pages": ["GET /health"]
           }
         ]
       }

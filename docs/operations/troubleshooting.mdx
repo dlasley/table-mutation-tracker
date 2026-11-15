@@ -8,7 +8,7 @@ icon: "life-ring"
   <Accordion title="Rebuild Index returns 504 Gateway Timeout" icon="hourglass">
     **Cause:** `/rebuild-index` reads every snapshot, so its run time grows all year. App Runner's load balancer ends any request after 120 seconds, regardless of the timeout set in n8n.
 
-    **Fix:** The daily pipeline uses `/append-index`, which does constant work per snapshot. For a full rebuild, run `scripts/rebuild_index.py` locally; see the [runbook](/operations/runbook#rebuild-the-rolling-index).
+    **Fix:** The scheduled pipeline uses `/append-index`, which does constant work per snapshot. For a full rebuild, run `scripts/rebuild_index.py` locally; see the [runbook](/operations/runbook#rebuild-the-rolling-index).
   </Accordion>
 
   <Accordion title="Append Index returns 422 Unprocessable Entity" icon="brackets-curly">

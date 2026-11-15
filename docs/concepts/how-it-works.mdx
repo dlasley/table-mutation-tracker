@@ -32,7 +32,7 @@ flowchart TB
   <Tab title="Orchestration">
     **n8n**, self-hosted behind a Caddy reverse proxy.
 
-    Runs the daily schedule, calls the scraper, commits each class's snapshot to the data repo through the GitHub Contents API, updates the rolling index, and sends error notifications. Conditional logic lives here, not in application code.
+    Runs the scrape on a schedule, calls the scraper, commits each class's snapshot to the data repo through the GitHub Contents API, updates the rolling index, and sends error notifications. Conditional logic lives here, not in application code.
 
     See [n8n workflow](/guides/n8n-workflow).
   </Tab>
@@ -70,7 +70,7 @@ flowchart TB
 | Scraper API | SIS credentials, webhook secret, GitHub token for the rolling index | Email credentials |
 | Frontend | Read-only GitHub token, basic auth credentials, LiveKit keys | SIS credentials, webhook secret |
 
-## A daily run
+## A scheduled run
 
 ```mermaid
 sequenceDiagram

@@ -1,13 +1,13 @@
 ---
 title: "n8n workflow"
-description: "The daily scrape pipeline node by node, with its success path, fallback, and error handling."
+description: "The scheduled scrape pipeline node by node, with its success path, fallback, and error handling."
 icon: "sitemap"
 ---
 
 n8n is the control plane. The scraper returns data and stops; n8n decides where that data goes, what to do when a step fails, and who hears about it. The exported workflow is in the repository at `n8n/table-mutation-data-orchestrator.json`.
 
-<Frame caption="The daily pipeline in the n8n editor">
-  <img src="/images/n8n-workflow.png" alt="n8n editor canvas showing the daily scrape workflow: Schedule Trigger, Scrape Tables, a success check, a loop committing each class, metadata commit, Append Index with a 409 fallback to Rebuild Index, and email notification on errors" />
+<Frame caption="The scrape pipeline in the n8n editor">
+  <img src="/images/n8n-workflow.png" alt="n8n editor canvas showing the scrape workflow: Schedule Trigger, Scrape Tables, a success check, a loop committing each class, metadata commit, Append Index with a 409 fallback to Rebuild Index, and email notification on errors" />
 </Frame>
 
 The diagram below shows the same flow with each branch labeled.
@@ -36,7 +36,7 @@ flowchart TB
 
 <Steps>
   <Step title="Schedule Trigger">
-    Fires once a day at 16:00 in the instance's configured time zone.
+    Starts a run on whatever cadence you configure, in the instance's time zone. Once a day is enough for most portals; more frequent runs raise the chance of bot-detection challenges.
   </Step>
   <Step title="Scrape Tables">
     HTTP Request to `POST /scrape`. The `X-Webhook-Secret` header comes from an n8n Header Auth credential, so the secret never appears in the exported workflow.

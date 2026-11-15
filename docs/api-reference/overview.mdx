@@ -8,8 +8,8 @@ The scraper exposes a small HTTP API for the n8n orchestrator. It is not a publi
 
 | Endpoint | Called by | Purpose |
 | --- | --- | --- |
-| `POST /scrape` | Daily workflow | Scrape the portal and return normalized JSON |
-| `POST /append-index` | Daily workflow, after commits | Add one snapshot to the rolling index |
+| `POST /scrape` | Scheduled workflow | Scrape the portal and return normalized JSON |
+| `POST /append-index` | Scheduled workflow, after commits | Add one snapshot to the rolling index |
 | `POST /rebuild-index` | Workflow fallback on 409 | Recompute the rolling index from every snapshot |
 | `GET /health` | Monitoring, deploys | Confirm required configuration is present |
 

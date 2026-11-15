@@ -23,7 +23,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://7gepqpxnpf.us-east-1.awsapprunner.com/scrape",
+        "url": "={{ $env.SCRAPER_BASE_URL }}/scrape",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
@@ -90,7 +90,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Split multi-table response\nconst scrapeData = $input.first().json.data;\n\nreturn scrapeData.classes.map(cls => ({\n  json: {\n    date: scrapeData.date,\n    time: scrapeData.time,\n    slug: cls.slug,\n    assignments: cls.assignments,\n    class_metadata: cls.metadata,\n    scrape_metadata: scrapeData.metadata,\n    scrape_timestamp: scrapeData.scrape_timestamp,\n    put_url: `https://api.github.com/repos/dlasley/table-mutation-data/contents/snapshots/${scrapeData.date}/${scrapeData.time}/${cls.slug}/assignments.json`,\n    put_body: {\n      message: `snapshot ${scrapeData.date}/${scrapeData.time}: ${cls.slug}`,\n      content: Buffer.from(JSON.stringify(cls.assignments, null, 2) + '\\n').toString('base64'),\n      branch: 'main',\n    },\n  }\n}));"
+        "jsCode": "// Split multi-table response\nconst scrapeData = $input.first().json.data;\n\nreturn scrapeData.classes.map(cls => ({\n  json: {\n    date: scrapeData.date,\n    time: scrapeData.time,\n    slug: cls.slug,\n    assignments: cls.assignments,\n    class_metadata: cls.metadata,\n    scrape_metadata: scrapeData.metadata,\n    scrape_timestamp: scrapeData.scrape_timestamp,\n    put_url: `https://api.github.com/repos/${$env.DATA_REPO}/contents/snapshots/${scrapeData.date}/${scrapeData.time}/${cls.slug}/assignments.json`,\n    put_body: {\n      message: `snapshot ${scrapeData.date}/${scrapeData.time}: ${cls.slug}`,\n      content: Buffer.from(JSON.stringify(cls.assignments, null, 2) + '\\n').toString('base64'),\n      branch: 'main',\n    },\n  }\n}));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -161,7 +161,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Construct snapshot metadata JSON \nconst scrapeData = $('Scrape Tables').first().json.data;\n\nconst metadata = {\n  date: scrapeData.date,\n  time: scrapeData.time,\n  scrape_timestamp: scrapeData.scrape_timestamp,\n  classes: {},\n};\n\nfor (const cls of scrapeData.classes) {\n  metadata.classes[cls.slug] = cls.metadata;\n}\n\nreturn [{\n  json: {\n    put_url: `https://api.github.com/repos/dlasley/table-mutation-data/contents/snapshots/${scrapeData.date}/${scrapeData.time}/metadata.json`,\n    put_body: {\n      message: `snapshot ${scrapeData.date}/${scrapeData.time}: metadata`,\n      content: Buffer.from(JSON.stringify(metadata, null, 2) + '\\n').toString('base64'),\n    },\n  }\n}];"
+        "jsCode": "// Construct snapshot metadata JSON \nconst scrapeData = $('Scrape Tables').first().json.data;\n\nconst metadata = {\n  date: scrapeData.date,\n  time: scrapeData.time,\n  scrape_timestamp: scrapeData.scrape_timestamp,\n  classes: {},\n};\n\nfor (const cls of scrapeData.classes) {\n  metadata.classes[cls.slug] = cls.metadata;\n}\n\nreturn [{\n  json: {\n    put_url: `https://api.github.com/repos/${$env.DATA_REPO}/contents/snapshots/${scrapeData.date}/${scrapeData.time}/metadata.json`,\n    put_body: {\n      message: `snapshot ${scrapeData.date}/${scrapeData.time}: metadata`,\n      content: Buffer.from(JSON.stringify(metadata, null, 2) + '\\n').toString('base64'),\n    },\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -174,8 +174,8 @@
     },
     {
       "parameters": {
-        "fromEmail": "dlasley@gmail.com",
-        "toEmail": "dlasley@gmail.com",
+        "fromEmail": "={{ $env.ALERT_EMAIL }}",
+        "toEmail": "={{ $env.ALERT_EMAIL }}",
         "subject": "={{ $json.subject }}",
         "emailFormat": "text",
         "text": "={{ $json.message }}",
@@ -239,7 +239,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://7gepqpxnpf.us-east-1.awsapprunner.com/append-index",
+        "url": "={{ $env.SCRAPER_BASE_URL }}/append-index",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
@@ -303,7 +303,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://7gepqpxnpf.us-east-1.awsapprunner.com/rebuild-index",
+        "url": "={{ $env.SCRAPER_BASE_URL }}/rebuild-index",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,

@@ -18,8 +18,13 @@ function checkRateLimit(ip: string): boolean {
   return entry.count <= RATE_LIMIT;
 }
 
+const AGENT_NAME = "my-agent";
+const PARTICIPANT_NAME = "Student";
+const PERSONAS = ["demo", "avatar1", "avatar2", "avatar3"];
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function POST(request: NextRequest) {
-  // Rate limiting
   const clientIp =
     request.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
     request.headers.get("x-real-ip") ||
@@ -44,24 +49,22 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body = await request.json().catch(() => ({}));
+    const parsed = await request.json().catch(() => null);
+    const body = parsed && typeof parsed === "object" ? parsed : {};
 
-    const roomName = body.room_name || `grades-${Date.now()}`;
+    const roomName = `grades-${crypto.randomUUID()}`;
     const participantIdentity =
-      body.participant_identity || `user-${Date.now()}`;
-    const participantName = body.participant_name || "Student";
-    const roomConfig = body.room_config;
-
-    const ip =
-      request.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
-      request.headers.get("x-real-ip") ||
-      "unknown";
+      typeof body.participant_identity === "string" &&
+      UUID_PATTERN.test(body.participant_identity)
+        ? body.participant_identity
+        : crypto.randomUUID();
+    const persona = PERSONAS.includes(body.persona) ? body.persona : "demo";
 
     const at = new AccessToken(apiKey, apiSecret, {
       identity: participantIdentity,
-      name: participantName,
-      metadata: body.participant_metadata || "",
-      attributes: { ...(body.participant_attributes || {}), ip_address: ip },
+      name: PARTICIPANT_NAME,
+      metadata: JSON.stringify({ persona }),
+      attributes: { ip_address: clientIp },
       ttl: "10m",
     });
 
@@ -72,19 +75,9 @@ export async function POST(request: NextRequest) {
       canSubscribe: true,
     });
 
-    if (roomConfig) {
-      const rc = new RoomConfiguration();
-      if (roomConfig.agents) {
-        rc.agents = roomConfig.agents.map(
-          (a: { agent_name: string; metadata?: string }) =>
-            new RoomAgentDispatch({
-              agentName: a.agent_name,
-              metadata: a.metadata || "",
-            })
-        );
-      }
-      at.roomConfig = rc;
-    }
+    at.roomConfig = new RoomConfiguration({
+      agents: [new RoomAgentDispatch({ agentName: AGENT_NAME })],
+    });
 
     const participantToken = await at.toJwt();
 

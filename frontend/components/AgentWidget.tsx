@@ -139,10 +139,7 @@ export default function AgentWidget() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           participant_identity: getDeviceId(),
-          participant_metadata: JSON.stringify({ persona: selectedPersona }),
-          room_config: {
-            agents: [{ agent_name: "my-agent" }],
-          },
+          persona: selectedPersona,
         }),
       });
 

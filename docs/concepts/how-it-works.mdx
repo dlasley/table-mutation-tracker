@@ -53,7 +53,7 @@ flowchart TB
   <Tab title="Presentation">
     **Frontend**, a Next.js app on Vercel.
 
-    Server components read the rolling index and snapshots from the data repo, cached for up to 60 seconds. The calendar uses pre-computed counts; the day view diffs two snapshots in the browser. HTTP basic auth protects the site when `BASIC_AUTH_CREDENTIALS` is set.
+    Server components read the rolling index and snapshots from the data repo, cached for up to 60 seconds. The calendar uses pre-computed counts; the day view diffs two snapshots in the browser. HTTP basic auth protects the site with the `user:password` pair in `BASIC_AUTH_CREDENTIALS`. If the variable is missing or malformed, the frontend answers every request with 503. Vercel preview deployments and `next dev` are the exceptions and serve without auth.
   </Tab>
   <Tab title="Voice agent">
     **LiveKit agent**, in a separate repository.

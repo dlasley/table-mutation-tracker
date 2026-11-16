@@ -11,6 +11,16 @@ const DATA_PREFIX = process.env.DATA_PREFIX || "";
 const SNAPSHOT_BASE = DATA_PREFIX ? `snapshots/${DATA_PREFIX}` : "snapshots";
 const INDEX_BASE = DATA_PREFIX ? `index/${DATA_PREFIX}` : "index";
 
+export class GitHubError extends Error {
+  constructor(
+    readonly status: number,
+    filePath: string
+  ) {
+    super(`GitHub API ${status}: ${filePath}`);
+    this.name = "GitHubError";
+  }
+}
+
 async function fetchGitHub(filePath: string): Promise<string> {
   const url = `https://api.github.com/repos/${DATA_REPO}/contents/${filePath}`;
   const res = await fetch(url, {
@@ -21,7 +31,7 @@ async function fetchGitHub(filePath: string): Promise<string> {
     next: { revalidate: 60 },
   });
   if (!res.ok) {
-    throw new Error(`GitHub API ${res.status}: ${filePath}`);
+    throw new GitHubError(res.status, filePath);
   }
   return res.text();
 }
@@ -39,7 +49,9 @@ export async function loadAssignments(
   try {
     const raw = await fetchGitHub(`${SNAPSHOT_BASE}/${date}/${time}/${slug}/assignments.json`);
     return JSON.parse(raw);
-  } catch {
-    return [];
+  } catch (err) {
+    // Only a missing file means the class is absent from this snapshot.
+    if (err instanceof GitHubError && err.status === 404) return [];
+    throw err;
   }
 }

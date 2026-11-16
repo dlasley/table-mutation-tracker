@@ -92,8 +92,7 @@ export default function DayDetail({
           `/api/snapshot/${refDate}/${timeFormatted}`
         );
         if (!res.ok) {
-          setChanges([]);
-          return;
+          throw new Error(`Snapshot comparison failed: ${res.status}`);
         }
         const prevAssignments: Record<string, Assignment[]> = await res.json();
 
@@ -104,8 +103,11 @@ export default function DayDetail({
           allChanges.push(...diffAssignments(curr, prev, slug));
         }
         setChanges(allChanges);
-      } catch {
-        setChanges([]);
+      } catch (err) {
+        // Throwing inside a state updater surfaces the error to the nearest error boundary.
+        setChanges(() => {
+          throw err;
+        });
       } finally {
         setLoading(false);
       }

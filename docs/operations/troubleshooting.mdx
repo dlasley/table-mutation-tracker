@@ -29,6 +29,12 @@ icon: "life-ring"
     **Fix:** Rebuild the index. The test suite fails if the Python and TypeScript field lists drift apart, so the two should never disagree on new data.
   </Accordion>
 
+  <Accordion title="The frontend returns 503 Service unavailable" icon="shield-halved">
+    **Cause:** `BASIC_AUTH_CREDENTIALS` is unset, empty, or not in `user:password` form with a non-empty password. Outside Vercel preview deployments and `next dev`, the frontend refuses every request in that case and logs `BASIC_AUTH_CREDENTIALS is missing or malformed; refusing all requests`.
+
+    **Fix:** Set `BASIC_AUTH_CREDENTIALS=user:password` in the frontend's environment and restart or redeploy it.
+  </Accordion>
+
   <Accordion title="An assignment shows as deleted and a similar one as added" icon="clone">
     **Cause:** Assignments are matched by name and due date. A rename or a moved due date breaks the match.
 

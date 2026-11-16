@@ -4,6 +4,20 @@ description: "Notable changes to the tracker, newest first."
 icon: "clock-rotate-left"
 ---
 
+<Update label="2026-11-15" description="Frontend requires basic auth and surfaces read failures" tags={["Frontend"]}>
+  ## Basic auth is required
+
+  The frontend no longer serves without credentials. If `BASIC_AUTH_CREDENTIALS` is missing or malformed, every request returns 503, except on Vercel preview deployments and `next dev`. Set it before you deploy this version. See [The frontend returns 503 Service unavailable](/operations/troubleshooting).
+
+  ## No false deletions on read errors
+
+  When the frontend cannot read a snapshot from the data repo for any reason other than a missing file, the day view shows an error instead of comparing against an empty snapshot. Previously a GitHub outage or an expired token could make the day view report changes that never happened.
+
+  ## Voice agent tokens
+
+  The token endpoint now sets the room name, agent, and participant name itself and ignores those fields from the browser. The browser sends only a device ID and the selected persona.
+</Update>
+
 <Update label="2026-11-14" description="Consistent change detection and safer error responses" tags={["Diffing", "API", "Pipeline", "Docs"]}>
   ## Error IDs instead of tracebacks
 
